@@ -13,7 +13,7 @@
 #include <stdbool.h>
 
 #include "types.h"
-#include "display.h"
+#include "disp.h"
 
 typedef struct {
     u8 N: 2; // LSB
@@ -76,6 +76,6 @@ typedef struct {
 // ? should we tick the PPU forward or simply blit it
 // ticking forward seems the best bet. 
 // TODO lot of state machines!
-bool ppu_tick(ppu_state_t *st, display_t *disp);
+bool ppu_tick(ppu_state_t *st, disp_t *disp);
 
 #endif

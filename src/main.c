@@ -7,8 +7,14 @@ int main(int argc, char** argv) {
         printf("ROM path not specified. Exiting.\n");
     }
 
-    nes_state_t nes;
+    nes_init(argv[1]);
 
-    nes.rom = rom_load_from_file(argv[1]);
+    while (!nes_should_exit()) {
+        nes_update_kbinput();
+        nes_step();
+    }
 
+    nes_exit();
+
+    return 0;
 }

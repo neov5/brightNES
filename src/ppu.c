@@ -1,6 +1,6 @@
 #include "ppu.h"
 
-bool ppu_tick(ppu_state_t *st, display_t *disp) {
+bool ppu_tick(ppu_state_t *st, disp_t *disp) {
 
     // tick forward and produce one pixel worth of data 
     // it's okay to coalesce processing logic and do multiple pixel writes in 
