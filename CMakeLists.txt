@@ -3,7 +3,7 @@ project(brightNES LANGUAGES C)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE) # for clangd
 enable_testing()
 
-add_subdirectory(lib/SDL2-2.30.5 EXCLUDE_FROM_ALL)
+add_subdirectory(lib/SDL EXCLUDE_FROM_ALL)
 add_subdirectory(lib/log.c EXCLUDE_FROM_ALL)
 
 file(GLOB_RECURSE SOURCES src/*.h src/*.c)
