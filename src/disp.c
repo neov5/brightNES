@@ -1,24 +1,31 @@
 #include "disp.h"
 #include "types.h"
 #include <log.h>
+#include <time.h>
 
 #define guard(s, e) if (((e) = (s))) return (e);
 
+int disp_ctr = 0;
+clock_t tic;
+
 int disp_init(disp_t *disp) {
     int err;
-    guard(SDL_Init(SDL_INIT_VIDEO), err);
+    if ((err = SDL_Init(SDL_INIT_VIDEO))) {
+        log_fatal("Could not initialize SDL: %s", SDL_GetError());
+        return err;
+    }
 
     disp->win = SDL_CreateWindow("brightNES", 100, 100, 256, 240, SDL_WINDOW_SHOWN);
     if (disp->win == NULL) {
-        log_fatal("Could not create Window: %s\n", SDL_GetError());
+        log_fatal("Could not create Window: %s", SDL_GetError());
         SDL_Quit();
         return -1;
     }
 
-    SDL_Renderer *r = SDL_CreateRenderer(disp->win, -1, SDL_RENDERER_ACCELERATED);
-    if (r == NULL) {
+    disp->surf = SDL_GetWindowSurface(disp->win);
+    if (disp->surf == NULL) {
         SDL_DestroyWindow(disp->win);
-        log_fatal("Could not create Renderer: %s\n", SDL_GetError());
+        log_fatal("Could not create Surface: %s", SDL_GetError());
         SDL_Quit();
         return -1;
     }
@@ -26,18 +33,24 @@ int disp_init(disp_t *disp) {
     return 0;
 }
 
-void disp_putpixel(disp_t *disp, u8 x, u8 y, u8 r, u8 g, u8 b) {
-    SDL_SetRenderDrawColor(disp->r, r, g, b, SDL_ALPHA_OPAQUE);
-    SDL_RenderDrawPoint(disp->r, x, y);
+void disp_putpixel(disp_t *disp, u32 x, u32 y, u8 r, u8 g, u8 b) {
+    Uint32 color = SDL_MapRGB(disp->surf->format, r, g, b);
+    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w) + x] = color;
 }
 
 void disp_blit(disp_t *disp) {
-    SDL_RenderPresent(disp->r);
-    SDL_RenderClear(disp->r);
+    SDL_UpdateWindowSurface(disp->win);
+    clock_t toc = clock();
+    if (disp_ctr > 0) {
+        double time = (double)(toc-tic)/CLOCKS_PER_SEC;
+        log_info("fps: %f", 1./time);
+    }
+    tic = toc;
+    disp_ctr++;
 }
 
 int disp_free(disp_t *disp) {
-    SDL_DestroyRenderer(disp->r);
+    SDL_DestroyWindowSurface(disp->win);
     SDL_DestroyWindow(disp->win);
     return 0;
 }

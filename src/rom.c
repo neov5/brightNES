@@ -50,7 +50,7 @@ void rom_load_from_file(rom_t *rom, char* filename) {
 }
 
 u8 no_mapper_cpu_read(rom_t *rom, u16 addr) {
-    return rom->prg_rom[addr & rom->prg_rom_size];
+    return rom->prg_rom[addr % rom->prg_rom_size];
 }
 
 u8 no_mapper_ppu_read(rom_t *rom, u16 addr) {

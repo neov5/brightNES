@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include <log.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -342,9 +343,11 @@ void cpu_icl_jmp_ind(cpu_state_t *st) {
     st->PC = hi(st->bus_read((ptr & 0xFF00) | lo(ptr+1))) | latch; st->tick(); // 5
 }
 
+
 void cpu_reset(cpu_state_t *st) {
-    st->PC |= hi(st->bus_read(0xFFFE));
-    st->PC |= lo(st->bus_read(0xFFFF));
+    st->PC |= hi(st->bus_read(0xFFFC));
+    st->PC |= lo(st->bus_read(0xFFFD));
+    st->P.I = 1;
 }
 
 void cpu_interrupt(cpu_state_t *st, u16 pc_addr) {
@@ -374,6 +377,7 @@ int cpu_exec(cpu_state_t *st) {
     }
 
     u8 opc = st->bus_read(st->PC++); st->tick();
+    log_debug("Instruction decoded: 0x%x", opc);
     switch (opc) {
         case 0xAA: cpu_icl_all_imp(st, &cpu_instr_tax); break;
         case 0xA8: cpu_icl_all_imp(st, &cpu_instr_tay); break;
