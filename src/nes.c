@@ -56,13 +56,9 @@ void nes_ppu_bus_write(u8 data, u16 addr) {
 }
 
 void nes_cpu_tick_callback() {
-    log_debug("CPU ticked");
     ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
-    log_debug("PPU ticked");
     ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
-    log_debug("PPU ticked");
     ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
-    log_debug("PPU ticked");
 }
 
 void nes_cpu_init(cpu_state_t *st) {
@@ -87,6 +83,8 @@ void nes_cpu_init(cpu_state_t *st) {
 }
 
 void nes_ppu_init(ppu_state_t *st) {
+    st->_row = st->_col = 0;
+
     st->bus_read = &nes_ppu_bus_read;
     st->bus_write = &nes_ppu_bus_write;
 }
@@ -106,25 +104,25 @@ void nes_exit() {
     rom_free(&state.rom);
 }
 
-void nes_update_kbinput() {
-
-}
-
-bool nes_should_exit() {
+bool nes_update_events() {
     SDL_Event event;
+    bool exit = false;
     while(SDL_PollEvent(&event)) {
+        // process other events too
         if (event.type == SDL_QUIT || (event.type == SDL_WINDOWEVENT &&
                                        event.window.event == SDL_WINDOWEVENT_CLOSE)) {
-            return true;
+            exit = true;
         }
     }
-    return false;
+    return exit;
 }
 
-void nes_step() {
-    log_debug("CPU stepped");
-    int retc = cpu_exec(&state.cpu_st);
-    if (retc != 0) {
-        log_fatal("CPU executed with code %d", retc);
+void nes_render_frame() {
+    while (!state._frame_done) {
+        // FIXME do this or check display blit to?
+        int enter_row = state.ppu_st._row, enter_col = state.ppu_st._col;
+        cpu_exec(&state.cpu_st);
+        if (state.ppu_st._row < enter_row && state.ppu_st._col < enter_col) state._frame_done = true;
     }
+    state._frame_done = false;
 }

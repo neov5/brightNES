@@ -3,6 +3,9 @@ project(brightNES LANGUAGES C)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE) # for clangd
 enable_testing()
 
+set(CMAKE_CXX_FLAGS "-O3")
+# set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall -Wextra")
+
 add_subdirectory(lib/SDL EXCLUDE_FROM_ALL)
 add_subdirectory(lib/log.c EXCLUDE_FROM_ALL)
 

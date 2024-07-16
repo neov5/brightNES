@@ -15,9 +15,10 @@ int main(int argc, char** argv) {
 
     nes_init(argv[1]);
 
-    while (!nes_should_exit()) {
-        nes_update_kbinput();
-        nes_step();
+    bool exit = false;
+    while (!exit) {
+        exit = nes_update_events();
+        nes_render_frame();
     }
 
     nes_exit();

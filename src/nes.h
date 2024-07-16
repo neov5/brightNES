@@ -17,6 +17,8 @@ typedef struct {
 
     disp_t disp;
 
+    bool _frame_done;
+
 } nes_state_t;
 
 typedef struct {
@@ -30,9 +32,8 @@ void nes_cpu_bus_write(u8 data, u16 addr);
 void nes_ppu_bus_write(u8 data, u16 addr);
 
 void nes_init(char* rom_path);
-bool nes_should_exit();
-void nes_update_kbinput();
-void nes_step();
+bool nes_update_events();
 void nes_exit();
+void nes_render_frame();
 
 #endif
