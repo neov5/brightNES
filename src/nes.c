@@ -6,8 +6,15 @@ nes_state_t state;
 u8 nes_cpu_bus_read(u16 addr) {
     log_debug("CPU bus reading from 0x%x", addr);
     if (addr < 0x2000) return state.cpu_mem.wram[addr & 0x7FF];
-    else if (addr < 0x4000) return ((u8*)(&state.ppu_st))[addr & 0x7];
-    else if (addr < 0x4020) return state.cpu_mem.apu_io_reg[addr & 0x3F];
+    else if (addr < 0x4000) {
+        u16 eaddr = addr & 0x7;
+        switch (eaddr) {
+            case 2: return ppu_ppustatus_read(&state.ppu_st);
+            case 7: return ppu_ppudata_read(&state.ppu_st);
+            default: return ((u8*)(&state.ppu_st))[eaddr];
+        }
+    }
+    else if (addr < 0x4020) return state.cpu_mem.apu_io_reg[addr & 0x3F]; // TODO apu mapping
     else return state.rom.mapper.cpu_read(&state.rom, addr & 0x7FFF); // only ROM map, no WRAM
 }
 
@@ -33,7 +40,16 @@ u8 nes_ppu_bus_read(u16 addr) {
 void nes_cpu_bus_write(u8 data, u16 addr) {
     log_debug("CPU bus writing 0x%xb to 0x%x", data, addr);
     if (addr < 0x2000) state.cpu_mem.wram[addr & 0x7FF] = data;
-    else if (addr < 0x4000) ((u8*)(&state.ppu_st))[addr & 0x7] = data;
+    else if (addr < 0x4000) {
+        u16 eaddr = addr & 0x7;
+        switch (eaddr) {
+            case 0: ppu_ppuctrl_write(&state.ppu_st, *(ppu_ctrl_t*)(&data)); break;
+            case 5: ppu_ppuscroll_write(&state.ppu_st, data); break;
+            case 6: ppu_ppuaddr_write(&state.ppu_st, data); break;
+            case 7: ppu_ppudata_write(&state.ppu_st, data); break;
+            default: ((u8*)(&state.ppu_st))[eaddr] = data;
+        }
+    }
     else if (addr < 0x4020) state.cpu_mem.apu_io_reg[addr & 0x3F] = data;
     else state.rom.mapper.cpu_write(&state.rom, data, addr & 0x7FFF);
 }
@@ -119,7 +135,7 @@ bool nes_update_events() {
 
 void nes_render_frame() {
     while (!state._frame_done) {
-        // FIXME do this or check display blit to?
+        // FIXME do this or put check in display_blit?
         int enter_row = state.ppu_st._row, enter_col = state.ppu_st._col;
         cpu_exec(&state.cpu_st);
         if (state.ppu_st._row < enter_row && state.ppu_st._col < enter_col) state._frame_done = true;

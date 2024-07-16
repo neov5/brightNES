@@ -11,4 +11,8 @@ typedef int32_t i32;
 
 #define KB 0x400 // 1 kB
 
+u8 force_u8(void* ptr) {
+    return *(u8*)(ptr);
+}
+
 #endif

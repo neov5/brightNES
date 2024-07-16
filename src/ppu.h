@@ -46,13 +46,17 @@ typedef struct {
     u8 V: 1; // MSB
 } ppu_status_t;
 
-typedef enum {
-    PPU_BLANKING,
-    PPU_RENDERING
-} ppu_sm_t ;
+typedef struct {
+    u16 X: 5; // LSB
+    u16 Y: 5;
+    u16 N: 2;
+    u16 y: 3;
+    u16 u: 1; // MSB
+} ppu_vram_addr_t;
 
 typedef struct {
 
+    // Don't access these externally! Use the methods
     ppu_ctrl_t ppuctrl;
     ppu_mask_t ppumask;
     ppu_status_t ppustatus;
@@ -74,19 +78,24 @@ typedef struct {
     u8 _rgba_palette[192];
 
     // internal registers
-    u16 _v;
-    u16 _t;
-    u8 _x;
-    u8 _y;
-    u8 _w;
-    
-    ppu_sm_t state;
+    ppu_vram_addr_t _v;
+    ppu_vram_addr_t _t;
+    u8 _x; // fine x scroll (3 bits)
+    u8 _w; // write toggle (1 bit)
     
 } ppu_state_t;
+
+void ppu_ppuctrl_write(ppu_state_t *st, ppu_ctrl_t data);
+u8 ppu_ppustatus_read(ppu_state_t *st);
+void ppu_ppuscroll_write(ppu_state_t *st, u8 data);
+void ppu_ppuaddr_write(ppu_state_t *st, u8 data);
+u8 ppu_ppudata_read(ppu_state_t *st);
+void ppu_ppudata_write(ppu_state_t *st, u8 data);
 
 // ? should we tick the PPU forward or simply blit it
 // ticking forward seems the best bet. 
 // TODO lot of state machines!
 void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp);
+void ppu_init(ppu_state_t *st);
 
 #endif

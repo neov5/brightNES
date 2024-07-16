@@ -19,6 +19,58 @@ const u8 PALETTE_2C02_NTSC[192] = {
 };
 
 
+void ppu_reset(ppu_state_t *st) {
+    *((u8*)&st->ppuctrl) = 0;
+    *((u8*)&st->ppumask) = 0;
+    st->ppustatus.S = st->ppustatus.O = st->ppustatus.u = 0;
+    st->ppuscroll = 0;
+    // TODO
+}
+
+void ppu_ppuctrl_write(ppu_state_t *st, ppu_ctrl_t data) {
+    st->ppuctrl = data;
+    st->_t.N = data.N;
+}
+
+u8 ppu_ppustatus_read(ppu_state_t *st) {
+    st->_w = 0;
+    return *(u8*)&st->ppustatus;
+}
+
+void ppu_ppuscroll_write(ppu_state_t *st, u8 data) {
+    if (st->_w == 0) {
+        st->_t.X = ((data & 0xF8)>>3);
+        st->_x = (data & 0x7);
+        st->_w = 1;
+    }
+    else {
+        st->_t.Y = ((u16)(data & 0xF8)>>3);
+        st->_t.y = (data & 0x7);
+        st->_w = 0;
+    }
+}
+
+void ppu_ppuaddr_write(ppu_state_t *st, u8 data) {
+    u16* _t_raw = (u16*)(&st->_t);
+    if (st->_w == 0) {
+        *_t_raw = ((*_t_raw)&0xFF) | ((u16)(data & 0x3F)<<8);
+        st->_w = 1;
+    }
+    else {
+        *_t_raw = ((*_t_raw & 0xFF00) | data);
+        st->_v = st->_t;
+        st->_w = 0;
+    }
+}
+
+u8 ppu_ppudata_read(ppu_state_t *st) {
+
+}
+
+void ppu_ppudata_write(ppu_state_t *st, u8 data) {
+
+}
+
 // TODO sprite evaluation
 // TODO y increment and x increment in v
 
