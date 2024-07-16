@@ -7,6 +7,8 @@ int main(int argc, char** argv) {
         printf("ROM path not specified. Exiting.\n");
     }
 
+    // TODO palette loading with -p|--palette
+
     nes_init(argv[1]);
 
     while (!nes_should_exit()) {

@@ -28,6 +28,9 @@ typedef struct {
     u8 S;
     cpu_sr_t P;
 
+    u8 IRQ;
+    u8 NMI;
+
     u8 (*bus_read)(u16);
     void (*bus_write)(u8, u16);
 

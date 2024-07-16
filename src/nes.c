@@ -52,13 +52,9 @@ void nes_ppu_bus_write(u8 data, u16 addr) {
 }
 
 void nes_cpu_tick_callback() {
-    bool interrupt;
-    interrupt |= ppu_tick(&state.ppu_st, &state.disp);
-    interrupt |= ppu_tick(&state.ppu_st, &state.disp);
-    interrupt |= ppu_tick(&state.ppu_st, &state.disp);
-    if (interrupt) {
-        // TODO interrupt CPU 
-    }
+    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
 }
 
 void nes_init(char* rom_path) {

@@ -115,6 +115,9 @@ void cpu_instr_plp(cpu_state_t *st) {
 void cpu_instr_brk(cpu_state_t *st) {
     st->PC++; st->tick(); // 2 (yes, this is a quirk of brk)
     st->bus_write(lo((st->PC&0xFF00)>>8), 0x100 + (st->S--)); st->tick(); // 3
+    // TODO If a hardware interrupt (NMI or IRQ) occurs before the fourth (flags
+    // saving) cycle of BRK, the BRK instruction will be skipped, and
+    // the processor will jump to the hardware interrupt vector. (64doc.txt)
     st->bus_write(lo(st->PC), 0x100 + (st->S--)); st->tick(); // 4
     cpu_sr_t sr = st->P;
     st->bus_write(*(u8*)(&sr), 0x100 + (st->S--)); st->tick(); // 5
@@ -344,7 +347,31 @@ void cpu_reset(cpu_state_t *st) {
     st->PC |= lo(st->bus_read(0xFFFF));
 }
 
+void cpu_interrupt(cpu_state_t *st, u16 pc_addr) {
+    st->tick(); // 1
+    st->tick(); // 2
+    st->bus_write(lo((st->PC&0xFF00)>>8), 0x100 + (st->S--)); st->tick(); // 3
+    st->bus_write(lo(st->PC), 0x100 + (st->S--)); st->tick(); // 4
+    cpu_sr_t sr = st->P;
+    st->bus_write(*(u8*)(&sr), 0x100 + (st->S--)); st->tick(); // 5
+    st->PC = 0;
+    st->P.I = 1;
+    st->PC |= lo(st->bus_read(pc_addr)); st->tick(); // 6
+    st->PC |= hi(st->bus_read(pc_addr+1)); st->tick(); // 7
+}
+
 int cpu_exec(cpu_state_t *st) {
+    
+    if (st->NMI == 1) {
+        cpu_interrupt(st, 0xFFFA);
+        st->NMI = 0;
+        return 1;
+    }
+    if (st->IRQ == 1 && st->P.I == 0) {
+        cpu_interrupt(st, 0xFFFE);
+        st->IRQ = 0;
+        return 2;
+    }
 
     u8 opc = st->bus_read(st->PC++); st->tick();
     switch (opc) {
