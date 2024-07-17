@@ -16,58 +16,74 @@
 #include "disp.h"
 #include "cpu.h"
 
-// Original NTSC palette
-// 64 colors, 24 bits each in .pal format (0xrr 0xgg 0xbb)
-typedef struct {
-    u8 N: 2; // LSB
-    u8 I: 1;
-    u8 S: 1;
-    u8 B: 1;
-    u8 H: 1;
-    u8 P: 1;
-    u8 V: 1; // MSB
+typedef union {
+    struct {
+        u8 N: 2; // LSB
+        u8 I: 1;
+        u8 S: 1;
+        u8 B: 1;
+        u8 H: 1;
+        u8 P: 1;
+        u8 V: 1; // MSB
+    };
+    u8 data;
 } ppu_ctrl_t;
 
-typedef struct {
-    u8 S: 1; // LSB
-    u8 m: 1;
-    u8 M: 1;
-    u8 b: 1;
-    u8 s: 1;
-    u8 R: 1;
-    u8 G: 1;
-    u8 B: 1; // MSB
+typedef union {
+    struct {
+        u8 S: 1; // LSB
+        u8 m: 1;
+        u8 M: 1;
+        u8 b: 1;
+        u8 s: 1;
+        u8 R: 1;
+        u8 G: 1;
+        u8 B: 1; // MSB
+    };
+    u8 data;
 } ppu_mask_t;
 
-typedef struct {
-    u8 u: 5; // LSB
-    u8 O: 1;
-    u8 S: 1;
-    u8 V: 1; // MSB
+typedef union {
+    struct {
+        u8 u: 5; // LSB
+        u8 O: 1;
+        u8 S: 1;
+        u8 V: 1; // MSB
+    };
+    u8 data;
 } ppu_status_t;
 
-typedef struct {
-    u16 X: 5; // LSB
-    u16 Y: 5;
-    u16 N: 2;
-    u16 y: 3;
-    u16 u: 1; // MSB
+typedef union {
+    struct {
+        u16 X: 5; // LSB
+        u16 Y: 5;
+        u16 N: 2;
+        u16 y: 3;
+        u16 u: 1; // MSB
+    };
+    u16 data;
 } ppu_vram_addr_t;
 
-typedef struct {
-    u16 X: 3; // LSB
-    u16 Y: 3;
-    u16 O: 4;
-    u16 N: 2;
-    u16 u: 4; // MSB
+typedef union {
+    struct {
+        u16 X: 3; // LSB
+        u16 Y: 3;
+        u16 O: 4;
+        u16 N: 2;
+        u16 u: 4; // MSB
+    };
+    u16 data;
 } ppu_at_addr_t;
 
 typedef struct {
-    u16 y: 3; // LSB
-    u16 P: 1;
-    u16 N: 8;
-    u16 H: 1;
-    u16 Z: 1; // MSB
+    struct {
+        u16 y: 3; // LSB
+        u16 P: 1;
+        u16 N: 8;
+        u16 H: 1;
+        u16 Z: 1; // MSB
+    };
+    u16 data;
 } ppu_pt_addr_t;
 
 typedef struct {
@@ -109,9 +125,13 @@ typedef struct {
 
 } ppu_state_t;
 
-void ppu_ppuctrl_write(ppu_state_t *st, ppu_ctrl_t data);
+void ppu_ppuctrl_write(ppu_state_t *st, u8 data);
+void ppu_ppumask_write(ppu_state_t *st, u8 data);
 u8 ppu_ppustatus_read(ppu_state_t *st);
 void ppu_ppuscroll_write(ppu_state_t *st, u8 data);
+void ppu_oamaddr_write(ppu_state_t *st, u8 data);
+u8 ppu_oamdata_read(ppu_state_t *st);
+void ppu_oamdata_write(ppu_state_t *st, u8 data);
 void ppu_ppuaddr_write(ppu_state_t *st, u8 data);
 u8 ppu_ppudata_read(ppu_state_t *st);
 void ppu_ppudata_write(ppu_state_t *st, u8 data);

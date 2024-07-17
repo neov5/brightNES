@@ -34,11 +34,13 @@ int disp_init(disp_t *disp) {
 }
 
 void disp_putpixel(disp_t *disp, u32 x, u32 y, u8 r, u8 g, u8 b) {
+    x *= 2;
+    y *= 2;
     Uint32 color = SDL_MapRGB(disp->surf->format, r, g, b);
-    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2) + x*2] = color;
-    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2 + 1) + x*2] = color;
-    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2 + 1) + x*2 + 1] = color;
-    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2) + x*2 + 1] = color;
+    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w) + x] = color;
+    ((Uint32*)disp->surf->pixels)[((y+1)*disp->surf->w) + x] = color;
+    ((Uint32*)disp->surf->pixels)[((y+1)*disp->surf->w) + x + 1] = color;
+    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w) + x + 1] = color;
 }
 
 void disp_blit(disp_t *disp) {

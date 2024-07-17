@@ -4,8 +4,8 @@
 #include <log.h>
 
 void ppu_reset(ppu_state_t *st) {
-    *((u8*)&st->ppuctrl) = 0;
-    *((u8*)&st->ppumask) = 0;
+    st->ppuctrl.data = 0;
+    st->ppumask.data = 0;
     st->ppustatus.S = st->ppustatus.O = st->ppustatus.u = 0;
     st->ppuscroll = 0;
     // TODO
@@ -42,15 +42,26 @@ void ppu_y_incr(ppu_state_t *st) {
     }
 }
 
+u8 ppu_oamdata_read(ppu_state_t *st) {
+    return 0;
+}
 
-void ppu_ppuctrl_write(ppu_state_t *st, ppu_ctrl_t data) {
-    st->ppuctrl = data;
-    st->_t.N = data.N;
+void ppu_oamdata_write(ppu_state_t *st, u8 data) {
+    // TODO impl
+}
+
+void ppu_oamaddr_write(ppu_state_t *st, u8 data) {
+    // TODO impl
+}
+
+void ppu_ppuctrl_write(ppu_state_t *st, u8 data) {
+    st->ppuctrl.data = data;
+    st->_t.N = st->ppuctrl.N;
 }
 
 u8 ppu_ppustatus_read(ppu_state_t *st) {
     st->_w = 0;
-    return *(u8*)&st->ppustatus;
+    return st->ppustatus.data;
 }
 
 void ppu_ppuscroll_write(ppu_state_t *st, u8 data) {
@@ -81,19 +92,36 @@ void ppu_ppuaddr_write(ppu_state_t *st, u8 data) {
 
 u8 ppu_ppudata_read(ppu_state_t *st) {
     u8 retval = st->ppudata;
-    st->ppudata = st->bus_read(*(u16*)(&st->_v));
-    if (st->ppuctrl.I == 0) ppu_coarse_x_incr(st);
-    else ppu_y_incr(st);
+    st->ppudata = st->bus_read(st->_v.data);
+    if (st->ppuctrl.I == 0) {
+        log_info("(r=%d, c=%d) Incrementing v by 1", st->_row, st->_col);
+        st->_v.data++;
+    }
+    else {
+        log_info("Incrementing v by 32");
+        st->_v.data += 32;
+    }
     return retval;
 }
 
+void ppu_ppumask_write(ppu_state_t *st, u8 data) {
+    st->ppumask.data = data;
+}
+
 void ppu_ppudata_write(ppu_state_t *st, u8 data) {
-    st->bus_write(data, *(u16*)(&st->_v));
-    if (st->ppuctrl.I == 0) ppu_coarse_x_incr(st);
-    else ppu_y_incr(st);
+    st->bus_write(data, st->_v.data);
+    if (st->ppuctrl.I == 0) {
+        log_info("(r=%d, c=%d) Incrementing v by 1", st->_row, st->_col);
+        st->_v.data++;
+    }
+    else {
+        log_info("Incrementing v by 32");
+        st->_v.data += 32;
+    }
 }
 
 // TODO sprite evaluation
+// TODO swap out all the ugly structs with unions and raw data access
 
 // Iteration 1: Don't do any sprite evaluation. Just render the background.
 
@@ -116,10 +144,10 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
 void ppu_get_next_pixel(ppu_state_t *st) {
     if (st->_col % 8 == 2) {
         // nametable fetch
-        u16 nt_addr = 0x2000 | ((*(u16*)(&st->_v)) & 0x0FFF);
+        u16 nt_addr = 0x2000 | (st->_v.data & 0x0FFF);
         st->_pt_addr = st->bus_read(nt_addr);
         // log_info("tile ptr addr: 0x%hx", nt_addr);
-        log_info("Pattern table ptr addr: 0x%hhx", st->_pt_addr);
+        // log_info("Pattern table ptr addr: 0x%hhx", st->_pt_addr);
     }
     else if (st->_col % 8 == 4) {
         // attribute table fetch
@@ -130,7 +158,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
             .N = st->_v.N,
             .u = 2
         };
-        u8 at_blk = st->bus_read(*(u16*)(&at_addr));
+        u8 at_blk = st->bus_read(at_addr.data);
         u8 shift_idx = (st->_v.X & 0x2)>>1 | (st->_v.Y & 0x2);
         u32 pal_idx = (at_blk & (0x3 << shift_idx)) >> shift_idx;
         st->_pix_buf = pal_idx;
@@ -147,7 +175,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
             .H = st->ppuctrl.B,
             .Z = 0
         };
-        u32 bg_lsb = st->bus_read(*(u16*)(&pt_lsb_addr));
+        u32 bg_lsb = st->bus_read(pt_lsb_addr.data);
         bg_lsb = (bg_lsb | (bg_lsb << 12)) & 0x000F000F;
         bg_lsb = (bg_lsb | (bg_lsb << 6)) & 0x03030303;
         bg_lsb = (bg_lsb | (bg_lsb << 3)) & 0x11111111;
@@ -162,7 +190,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
             .H = st->ppuctrl.B,
             .Z = 0
         };
-        u32 bg_msb = st->bus_read(*(u16*)(&pt_lsb_addr));
+        u32 bg_msb = st->bus_read(pt_lsb_addr.data);
         bg_msb = (bg_msb | (bg_msb << 12)) & 0x000F000F;
         bg_msb = (bg_msb | (bg_msb << 6)) & 0x03030303;
         bg_msb = (bg_msb | (bg_msb << 3)) & 0x11111111;
@@ -190,6 +218,7 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
     switch (ppu_st->_col) {
         case 1:
             ppu_st->ppustatus.V = ppu_st->ppustatus.S = ppu_st->ppustatus.O = 0;
+            if (ppu_st->ppuctrl.V == 1) cpu_st->NMI = 1;
             break;
         case 280 ... 304:
             // vert(v) = vert(t) if rendering enabled
@@ -243,7 +272,6 @@ void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
     switch (ppu_st->_row) {
         case 261: ppu_prerender_scanline_tick(ppu_st, cpu_st, disp); break;
         case 0 ... 239: ppu_render_visible_scanline_tick(ppu_st, cpu_st, disp); break;
-        case 240: break;
         case 241: ppu_postrender_scanline_tick(ppu_st, disp); break;
     }
 

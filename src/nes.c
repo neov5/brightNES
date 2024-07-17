@@ -26,8 +26,9 @@ u8 nes_cpu_bus_read(u16 addr) {
         u16 eaddr = addr & 0x7;
         switch (eaddr) {
             case 2: return ppu_ppustatus_read(&state.ppu_st);
+            case 4: return ppu_oamdata_read(&state.ppu_st);
             case 7: return ppu_ppudata_read(&state.ppu_st);
-            default: return ((u8*)(&state.ppu_st))[eaddr];
+            default: log_fatal("Cannot read from address 0x%hx", addr); exit(1);
         }
     }
     else if (addr < 0x4020) return state.cpu_mem.apu_io_reg[addr & 0x3F]; // TODO apu mapping
@@ -35,7 +36,7 @@ u8 nes_cpu_bus_read(u16 addr) {
 }
 
 u8 nes_ppu_bus_read(u16 addr) {
-    // log_info("PPU bus reading from 0x%x", addr);
+    log_info("PPU bus reading from 0x%x", addr);
     if (addr < 0x2000) return state.rom.mapper.ppu_read(&state.rom, addr);
     else if (addr < 0x3000) {
         u16 eaddr = addr & 0x7FF;
@@ -59,11 +60,14 @@ void nes_cpu_bus_write(u8 data, u16 addr) {
     else if (addr < 0x4000) {
         u16 eaddr = addr & 0x7;
         switch (eaddr) {
-            case 0: ppu_ppuctrl_write(&state.ppu_st, *(ppu_ctrl_t*)(&data)); break;
+            case 0: ppu_ppuctrl_write(&state.ppu_st, data); break;
+            case 1: ppu_ppumask_write(&state.ppu_st, data); break;
+            case 3: ppu_oamaddr_write(&state.ppu_st, data); break;
+            case 4: ppu_oamdata_write(&state.ppu_st, data); break;
             case 5: ppu_ppuscroll_write(&state.ppu_st, data); break;
             case 6: ppu_ppuaddr_write(&state.ppu_st, data); break;
             case 7: ppu_ppudata_write(&state.ppu_st, data); break;
-            default: ((u8*)(&state.ppu_st))[eaddr] = data;
+            default: log_fatal("Cannot write to address 0x%hx", addr); exit(1);
         }
     }
     else if (addr < 0x4020) state.cpu_mem.apu_io_reg[addr & 0x3F] = data;
