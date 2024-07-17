@@ -3,22 +3,6 @@
 #include "disp.h"
 #include <log.h>
 
-const u8 PALETTE_2C02_NTSC[192] = {
-    0x52, 0x52, 0x52, 0x00, 0x00, 0x80, 0x08, 0x00, 0x80, 0x2e, 0x00, 0x7e, 0x4a, 0x00, 0x4e, 0x50,
-    0x00, 0x06, 0x44, 0x00, 0x00, 0x26, 0x08, 0x00, 0x0a, 0x20, 0x00, 0x00, 0x2e, 0x00, 0x00, 0x32,
-    0x00, 0x00, 0x26, 0x0a, 0x00, 0x1c, 0x48, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xa4, 0xa4, 0xa4, 0x00, 0x38, 0xce, 0x34, 0x16, 0xec, 0x5e, 0x04, 0xdc, 0x8c, 0x00, 0xb0, 0x9a,
-    0x00, 0x4c, 0x90, 0x18, 0x00, 0x70, 0x36, 0x00, 0x4c, 0x54, 0x00, 0x0e, 0x6c, 0x00, 0x00, 0x74,
-    0x00, 0x00, 0x6c, 0x2c, 0x00, 0x5e, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0x4c, 0x9c, 0xff, 0x7c, 0x78, 0xff, 0xa6, 0x64, 0xff, 0xda, 0x5a, 0xff, 0xf0,
-    0x54, 0xc0, 0xf0, 0x6a, 0x56, 0xd6, 0x86, 0x10, 0xba, 0xa4, 0x00, 0x76, 0xc0, 0x00, 0x46, 0xcc,
-    0x1a, 0x2e, 0xc8, 0x66, 0x34, 0xc2, 0xbe, 0x3a, 0x3a, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xb6, 0xda, 0xff, 0xc8, 0xca, 0xff, 0xda, 0xc2, 0xff, 0xf0, 0xbe, 0xff, 0xfc,
-    0xbc, 0xee, 0xfa, 0xc2, 0xc0, 0xf2, 0xcc, 0xa2, 0xe6, 0xda, 0x92, 0xcc, 0xe6, 0x8e, 0xb8, 0xee,
-    0xa2, 0xae, 0xea, 0xbe, 0xae, 0xe8, 0xe2, 0xb0, 0xb0, 0xb0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-};
-
-
 void ppu_reset(ppu_state_t *st) {
     *((u8*)&st->ppuctrl) = 0;
     *((u8*)&st->ppumask) = 0;
@@ -26,6 +10,38 @@ void ppu_reset(ppu_state_t *st) {
     st->ppuscroll = 0;
     // TODO
 }
+
+// https://www.nesdev.org/wiki/PPU_scrolling#Coarse_X_increment
+void ppu_coarse_x_incr(ppu_state_t *st) {
+    if (st->_v.X == 0x1F) {
+        st->_v.X = 0;
+        st->_v.N ^= 1; // switch horizontal nametable
+    }
+    else {
+        st->_v.X++;
+    }
+}
+
+// https://www.nesdev.org/wiki/PPU_scrolling#Y_increment
+void ppu_y_incr(ppu_state_t *st) {
+    if (st->_v.y < 7) {
+        st->_v.y++;
+    }
+    else {
+        st->_v.y = 0;
+        if (st->_v.Y == 29) {
+            st->_v.Y = 0;
+            st->_v.N ^= 2; // switch vertical nametable
+        }
+        else if (st->_v.Y == 31) {
+            st->_v.Y = 0;
+        }
+        else {
+            st->_v.Y++;
+        }
+    }
+}
+
 
 void ppu_ppuctrl_write(ppu_state_t *st, ppu_ctrl_t data) {
     st->ppuctrl = data;
@@ -64,42 +80,154 @@ void ppu_ppuaddr_write(ppu_state_t *st, u8 data) {
 }
 
 u8 ppu_ppudata_read(ppu_state_t *st) {
-
+    u8 retval = st->ppudata;
+    st->ppudata = st->bus_read(*(u16*)(&st->_v));
+    if (st->ppuctrl.I == 0) ppu_coarse_x_incr(st);
+    else ppu_y_incr(st);
+    return retval;
 }
 
 void ppu_ppudata_write(ppu_state_t *st, u8 data) {
-
+    st->bus_write(data, *(u16*)(&st->_v));
+    if (st->ppuctrl.I == 0) ppu_coarse_x_incr(st);
+    else ppu_y_incr(st);
 }
 
 // TODO sprite evaluation
-// TODO y increment and x increment in v
 
-void ppu_coarse_x_incr(ppu_state_t *st) {
+// Iteration 1: Don't do any sprite evaluation. Just render the background.
 
+void ppu_shift_bufs(ppu_state_t *st) {
+    st->_pix_sr |= ((u64)(st->_pix_buf)<<32);
 }
 
-void ppu_coarse_y_incr(ppu_state_t *st) {
+void ppu_shift_pix_sr(ppu_state_t *st) {
+    st->_pix_sr >>= 4;
+}
 
+void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
+    u8 pixel = (st->_pix_sr & (0xFU << st->_x))>>st->_x;
+    // 4 bit pixel lookup value
+    // since this is a background sprite, look up the background palette (MSB=0)
+    disp_putpixel(disp, st->_col-1, st->_row,
+            st->_rgb_palette[pixel*3], st->_rgb_palette[pixel*3+1], st->_rgb_palette[pixel*3+2]);
+}
+
+void ppu_get_next_pixel(ppu_state_t *st) {
+    if (st->_col % 8 == 2) {
+        // nametable fetch
+        u16 nt_addr = 0x2000 | ((*(u16*)(&st->_v)) & 0x0FFF);
+        st->_pt_addr = st->bus_read(nt_addr);
+        // log_info("tile ptr addr: 0x%hx", nt_addr);
+        log_info("Pattern table ptr addr: 0x%hhx", st->_pt_addr);
+    }
+    else if (st->_col % 8 == 4) {
+        // attribute table fetch
+        ppu_at_addr_t at_addr = {
+            .X = (st->_v.X)>>2,
+            .Y = (st->_v.Y)>>2,
+            .O = 0xFU,
+            .N = st->_v.N,
+            .u = 2
+        };
+        u8 at_blk = st->bus_read(*(u16*)(&at_addr));
+        u8 shift_idx = (st->_v.X & 0x2)>>1 | (st->_v.Y & 0x2);
+        u32 pal_idx = (at_blk & (0x3 << shift_idx)) >> shift_idx;
+        st->_pix_buf = pal_idx;
+        st->_pix_buf |= (st->_pix_buf << 4);
+        st->_pix_buf |= (st->_pix_buf << 8);
+        st->_pix_buf |= (st->_pix_buf << 16);
+    }
+    else if (st->_col % 8 == 6) {
+        // BG LSBits fetch
+        ppu_pt_addr_t pt_lsb_addr = {
+            .y = st->_v.y,
+            .P = 0,
+            .N = st->_pt_addr,
+            .H = st->ppuctrl.B,
+            .Z = 0
+        };
+        u32 bg_lsb = st->bus_read(*(u16*)(&pt_lsb_addr));
+        bg_lsb = (bg_lsb | (bg_lsb << 12)) & 0x000F000F;
+        bg_lsb = (bg_lsb | (bg_lsb << 6)) & 0x03030303;
+        bg_lsb = (bg_lsb | (bg_lsb << 3)) & 0x11111111;
+        st->_pix_buf |= (bg_lsb << 3);
+    }
+    else if (st->_col % 8 == 0) {
+        // BG MSBits fetch
+        ppu_pt_addr_t pt_lsb_addr = {
+            .y = st->_v.y,
+            .P = 1,
+            .N = st->_pt_addr,
+            .H = st->ppuctrl.B,
+            .Z = 0
+        };
+        u32 bg_msb = st->bus_read(*(u16*)(&pt_lsb_addr));
+        bg_msb = (bg_msb | (bg_msb << 12)) & 0x000F000F;
+        bg_msb = (bg_msb | (bg_msb << 6)) & 0x03030303;
+        bg_msb = (bg_msb | (bg_msb << 3)) & 0x11111111;
+        st->_pix_buf |= (bg_msb << 4);
+
+        // TODO incr horiz v 
+        ppu_shift_bufs(st);
+        ppu_coarse_x_incr(st);
+        if (st->_col == 256) ppu_y_incr(st);
+    }
+}
+
+void ppu_load_vert_addr(ppu_state_t *st) {
+    st->_v.y = st->_t.y;
+    st->_v.Y = st->_t.Y;
+    st->_v.N = (st->_v.N & 0x1) | (st->_t.N & 0x2);
+}
+
+void ppu_load_horiz_addr(ppu_state_t *st) {
+    st->_v.X = st->_t.X;
+    st->_v.N = (st->_v.N & 0x2) | (st->_t.N & 0x1);
 }
 
 void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
     switch (ppu_st->_col) {
         case 1:
             ppu_st->ppustatus.V = ppu_st->ppustatus.S = ppu_st->ppustatus.O = 0;
-
+            break;
+        case 280 ... 304:
+            // vert(v) = vert(t) if rendering enabled
+            if (ppu_st->ppumask.b) ppu_load_vert_addr(ppu_st);
+            break;
+        case 321 ... 336:
+            ppu_shift_pix_sr(ppu_st);
+            ppu_get_next_pixel(ppu_st);
+            break;
     }
 }
 
+// ? How accurate do we want this to be
 void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
-    if (ppu_st->_col < 256) {
-        // log_info("%d %d", ppu_st->_row, ppu_st->_col);
-        disp_putpixel(disp, ppu_st->_col, ppu_st->_row, ppu_st->_row, ppu_st->_col, 0xFF);
+    if (ppu_st->_col == 0) {
+        // idle cycle
     }
+    else if (ppu_st->_col <= 256) {
+        // blit current pixel onto display
+        ppu_put_pixel(ppu_st, disp);
+        ppu_shift_pix_sr(ppu_st);
+        ppu_get_next_pixel(ppu_st);
+    }
+    else if (ppu_st->_col == 257) {
+        ppu_load_horiz_addr(ppu_st);
+        // hori(v) = hori(t)
+    }
+    else if (ppu_st->_col >= 321 && ppu_st->_col <= 336) {
+        ppu_shift_pix_sr(ppu_st);
+        ppu_get_next_pixel(ppu_st);
+    }
+    // TODO garbage nametable fetches - MMC5 uses them?
 }
 
 void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, disp_t *disp) {
     if (ppu_st->_col == 1) {
-        disp_blit(disp); // ppu_st->ppustatus.V = 1;
+        disp_blit(disp); 
+        ppu_st->ppustatus.V = 1;
     }
 }
 
@@ -115,6 +243,7 @@ void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
     switch (ppu_st->_row) {
         case 261: ppu_prerender_scanline_tick(ppu_st, cpu_st, disp); break;
         case 0 ... 239: ppu_render_visible_scanline_tick(ppu_st, cpu_st, disp); break;
+        case 240: break;
         case 241: ppu_postrender_scanline_tick(ppu_st, disp); break;
     }
 

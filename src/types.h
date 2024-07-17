@@ -8,11 +8,9 @@ typedef int8_t s8;
 typedef int16_t s16;
 typedef uint32_t u32;
 typedef int32_t i32;
+typedef uint64_t u64;
+typedef int64_t i64;
 
 #define KB 0x400 // 1 kB
-
-u8 force_u8(void* ptr) {
-    return *(u8*)(ptr);
-}
 
 #endif

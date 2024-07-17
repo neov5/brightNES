@@ -55,6 +55,22 @@ typedef struct {
 } ppu_vram_addr_t;
 
 typedef struct {
+    u16 X: 3; // LSB
+    u16 Y: 3;
+    u16 O: 4;
+    u16 N: 2;
+    u16 u: 4; // MSB
+} ppu_at_addr_t;
+
+typedef struct {
+    u16 y: 3; // LSB
+    u16 P: 1;
+    u16 N: 8;
+    u16 H: 1;
+    u16 Z: 1; // MSB
+} ppu_pt_addr_t;
+
+typedef struct {
 
     // Don't access these externally! Use the methods
     ppu_ctrl_t ppuctrl;
@@ -75,14 +91,22 @@ typedef struct {
 
     u16 _row;
     u16 _col;
-    u8 _rgba_palette[192];
+    u8 _rgb_palette[192];
+
+    u16 _ppuaddr;
 
     // internal registers
     ppu_vram_addr_t _v;
     ppu_vram_addr_t _t;
     u8 _x; // fine x scroll (3 bits)
     u8 _w; // write toggle (1 bit)
-    
+
+    u16 _addr_buf;
+
+    u64 _pix_sr; // 4x8x2 (P2 P1), shifts right
+    u8 _pt_addr;
+    u32 _pix_buf; // 4x8
+
 } ppu_state_t;
 
 void ppu_ppuctrl_write(ppu_state_t *st, ppu_ctrl_t data);

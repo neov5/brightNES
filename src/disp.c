@@ -5,8 +5,8 @@
 
 #define guard(s, e) if (((e) = (s))) return (e);
 
-int disp_ctr = 0;
-clock_t tic;
+// int disp_ctr = 0;
+// clock_t tic;
 
 int disp_init(disp_t *disp) {
     int err;
@@ -15,7 +15,7 @@ int disp_init(disp_t *disp) {
         return err;
     }
 
-    disp->win = SDL_CreateWindow("brightNES", 100, 100, 256, 240, SDL_WINDOW_SHOWN);
+    disp->win = SDL_CreateWindow("brightNES", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
     if (disp->win == NULL) {
         log_fatal("Could not create Window: %s", SDL_GetError());
         SDL_Quit();
@@ -35,18 +35,21 @@ int disp_init(disp_t *disp) {
 
 void disp_putpixel(disp_t *disp, u32 x, u32 y, u8 r, u8 g, u8 b) {
     Uint32 color = SDL_MapRGB(disp->surf->format, r, g, b);
-    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w) + x] = color;
+    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2) + x*2] = color;
+    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2 + 1) + x*2] = color;
+    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2 + 1) + x*2 + 1] = color;
+    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w*2) + x*2 + 1] = color;
 }
 
 void disp_blit(disp_t *disp) {
     SDL_UpdateWindowSurface(disp->win);
-    clock_t toc = clock();
-    if (disp_ctr > 0) {
-        double time = (double)(toc-tic)/CLOCKS_PER_SEC;
-        log_info("fps: %f", 1./time);
-    }
-    tic = toc;
-    disp_ctr++;
+    // clock_t toc = clock();
+    // if (disp_ctr > 0) {
+    //     double time = (double)(toc-tic)/CLOCKS_PER_SEC;
+    //     log_info("fps: %f", 1./time);
+    // }
+    // tic = toc;
+    // disp_ctr++;
 }
 
 int disp_free(disp_t *disp) {
