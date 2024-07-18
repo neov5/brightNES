@@ -1,5 +1,5 @@
 #include "cpu.h"
-#include <log.h>
+#include "log.h"
 #include <stdio.h>
 #include <stdbool.h>
 

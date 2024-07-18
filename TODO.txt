@@ -1,0 +1,4 @@
+- [ ] Logging
+- [ ] Debug and Release flags
+- [ ] imgui load as library
+- [ ] Debug UI

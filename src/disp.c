@@ -1,9 +1,10 @@
 #include "disp.h"
 #include "types.h"
+#include "nes.h"
 #include <log.h>
 #include <time.h>
 
-#define guard(s, e) if (((e) = (s))) return (e);
+extern nes_state_t state;
 
 // int disp_ctr = 0;
 // clock_t tic;
@@ -45,6 +46,7 @@ void disp_putpixel(disp_t *disp, u32 x, u32 y, u8 r, u8 g, u8 b) {
 
 void disp_blit(disp_t *disp) {
     SDL_UpdateWindowSurface(disp->win);
+    state.frame_done = true;
     // clock_t toc = clock();
     // if (disp_ctr > 0) {
     //     double time = (double)(toc-tic)/CLOCKS_PER_SEC;

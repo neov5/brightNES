@@ -17,8 +17,10 @@ typedef struct {
 
     disp_t disp;
 
-    bool _frame_done;
+    bool frame_done;
 
+    u64 ppu_cycle;
+    u64 cpu_cycle;
 } nes_state_t;
 
 typedef struct {

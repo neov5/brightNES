@@ -93,8 +93,11 @@ void nes_ppu_bus_write(u8 data, u16 addr) {
 
 void nes_cpu_tick_callback() {
     ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    state.ppu_cycle++;
     ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    state.ppu_cycle++;
     ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    state.ppu_cycle++;
 }
 
 void nes_cpu_init(cpu_state_t *st) {
@@ -170,11 +173,9 @@ bool nes_update_events() {
 }
 
 void nes_render_frame() {
-    while (!state._frame_done) {
-        // FIXME do this or put check in display_blit?
-        int enter_row = state.ppu_st._row, enter_col = state.ppu_st._col;
+    while (!state.frame_done) {
         cpu_exec(&state.cpu_st);
-        if (state.ppu_st._row < enter_row && state.ppu_st._col < enter_col) state._frame_done = true;
+        state.cpu_cycle++;
     }
-    state._frame_done = false;
+    state.frame_done = false;
 }
