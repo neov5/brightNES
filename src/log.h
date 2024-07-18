@@ -1,6 +1,10 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 
+#include <stdio.h>
+#include <stdarg.h>
+#include "nes.h"
+
 typedef enum {
     TRACE = 0,
     DEBUG = 1,
@@ -10,6 +14,15 @@ typedef enum {
     FATAL = 5
 } log_level_t;
 
+typedef struct {
+  va_list ap;
+  const char *fmt;
+  FILE* output;
+  log_level_t level;
+  u64 cpu_cycle;
+  u64 ppu_cycle;
+} log_event_t;
+
 #if defined(LOG_TRACE)
 #define log_trace(...) log_log(LOG_TRACE, __VA_ARGS__)
 #else
@@ -17,35 +30,36 @@ typedef enum {
 #endif
 
 #if defined(LOG_DEBUG) || defined(LOG_TRACE)
-#define log_debug(...) log_log(LOG_DEBUG, __VA_ARGS__)
+#define log_debug(...) log_log(DEBUG, __VA_ARGS__)
 #else
 #define log_debug(...) do {} while (0)
 #endif
 
 #if defined(LOG_INFO) || defined(LOG_DEBUG) || defined(LOG_TRACE)
-#define log_info(...) log_log(LOG_INFO, __VA_ARGS__)
+#define log_info(...) log_log(INFO, __VA_ARGS__)
 #else
 #define log_info(...) do {} while (0)
 #endif
 
 #if defined(LOG_WARN) || defined(LOG_INFO) || defined(LOG_DEBUG) || defined(LOG_TRACE)
-#define log_warn(...) log_log(LOG_WARN, __VA_ARGS__)
+#define log_warn(...) log_log(WARN, __VA_ARGS__)
 #else
 #define log_warn(...) do {} while (0)
 #endif
 
 #if defined(LOG_ERROR) || defined(LOG_WARN) || defined(LOG_INFO) || defined(LOG_DEBUG) || defined(LOG_TRACE)
-#define log_error(...) log_log(LOG_ERROR, __VA_ARGS__)
+#define log_error(...) log_log(ERROR, __VA_ARGS__)
 #else
 #define log_error(...) do {} while (0)
 #endif
 
 #if defined(LOG_FATAL) || defined(LOG_ERROR) || defined(LOG_WARN) || defined(LOG_INFO) || defined(LOG_DEBUG) || defined(LOG_TRACE)
-#define log_fatal(...) log_log(LOG_FATAL, __VA_ARGS__)
+#define log_fatal(...) log_log(FATAL, __VA_ARGS__)
 #else
 #define log_fatal(...) do {} while (0)
 #endif
 
 void log_log(log_level_t level, const char* fmt, ...);
+int log_add_fp(FILE *fp);
 
 #endif

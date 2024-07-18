@@ -377,7 +377,6 @@ int cpu_exec(cpu_state_t *st) {
     }
 
     u8 opc = st->bus_read(st->PC++); st->tick();
-    log_debug("Instruction decoded: 0x%x", opc);
     switch (opc) {
         case 0xAA: cpu_icl_all_imp(st, &cpu_instr_tax); break;
         case 0xA8: cpu_icl_all_imp(st, &cpu_instr_tay); break;

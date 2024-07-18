@@ -1,11 +1,8 @@
 #include "nes.h"
-#include <log.h>
 #include <stdio.h>
 
 
 int main(int argc, char** argv) {
-
-    log_set_level(LOG_WARN);
 
     if (argc <= 1) {
         printf("ROM path not specified. Exiting.\n");

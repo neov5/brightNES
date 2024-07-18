@@ -2,11 +2,16 @@
 #include "nes.h"
 #include <stdio.h>
 
+#define MAX_FILES 32
+
 extern nes_state_t state;
+
+static FILE *fps[32];
+static int n_fps = 0;
 
 static const char* level_strings[] = {
     "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
-}
+};
 
 #ifdef LOG_USE_COLOR
 static const char *level_colors[] = {
@@ -14,24 +19,46 @@ static const char *level_colors[] = {
 };
 #endif
 
-static void stdout_callback(log_Event *ev) {
-  char buf[16];
-  buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
+int log_add_fp(FILE *fp) {
+    if (n_fps == MAX_FILES) return -1;
+    fps[n_fps++] = fp;
+    return 0;
+}
+
+static void _log_event(log_event_t *ev) {
 #ifdef LOG_USE_COLOR
-  fprintf(
-    ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
-    buf, level_colors[ev->level], level_strings[ev->level],
-    ev->file, ev->line);
+    fprintf(
+        ev->output, "(cpu: %7llu) (ppu: %7llu) %s%-5s\x1b[0m ",
+        ev->cpu_cycle, ev->ppu_cycle, 
+        level_colors[ev->level], level_strings[ev->level]);
 #else
-  fprintf(
-    ev->udata, "%s %-5s %s:%d: ",
-    buf, level_strings[ev->level], ev->file, ev->line);
+    fprintf(
+        ev->output, "(cpu: %-8llu) (ppu: %-8llu) %-5s ",
+        state.cpu_cycle, state.ppu_cycle, 
+        level_strings[ev->level]);
 #endif
-  vfprintf(ev->udata, ev->fmt, ev->ap);
-  fprintf(ev->udata, "\n");
-  fflush(ev->udata);
+    vfprintf(ev->output, ev->fmt, ev->ap);
+    fprintf(ev->output, "\n");
+    fflush(ev->output);
 }
 
 void log_log(log_level_t level, const char* fmt, ...) {
+    log_event_t evt = {
+        .fmt   = fmt,
+        .cpu_cycle = state.cpu_cycle,
+        .ppu_cycle = state.ppu_cycle,
+        .output = stderr,
+        .level = level,
+    };
 
+    va_start(evt.ap, fmt);
+    _log_event(&evt);
+    va_end(evt.ap);
+
+    for (int i=0; i<n_fps; i++) {
+        evt.output = fps[i];
+        va_start(evt.ap, fmt);
+        _log_event(&evt);
+        va_end(evt.ap);
+    }
 }

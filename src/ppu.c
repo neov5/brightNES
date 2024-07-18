@@ -1,7 +1,7 @@
 #include "ppu.h"
 #include "cpu.h"
 #include "disp.h"
-#include <log.h>
+#include "log.h"
 
 void ppu_reset(ppu_state_t *st) {
     st->ppuctrl.data = 0;
@@ -94,11 +94,9 @@ u8 ppu_ppudata_read(ppu_state_t *st) {
     u8 retval = st->ppudata;
     st->ppudata = st->bus_read(st->_v.data);
     if (st->ppuctrl.I == 0) {
-        log_info("(r=%d, c=%d) Incrementing v by 1", st->_row, st->_col);
         st->_v.data++;
     }
     else {
-        log_info("Incrementing v by 32");
         st->_v.data += 32;
     }
     return retval;
@@ -111,11 +109,9 @@ void ppu_ppumask_write(ppu_state_t *st, u8 data) {
 void ppu_ppudata_write(ppu_state_t *st, u8 data) {
     st->bus_write(data, st->_v.data);
     if (st->ppuctrl.I == 0) {
-        log_info("(r=%d, c=%d) Incrementing v by 1", st->_row, st->_col);
         st->_v.data++;
     }
     else {
-        log_info("Incrementing v by 32");
         st->_v.data += 32;
     }
 }
@@ -137,7 +133,6 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     u8 pixel = (st->_pix_sr & (0xFU << st->_x))>>st->_x;
     // 4 bit pixel lookup value
     // since this is a background sprite, look up the background palette (MSB=0)
-    log_info("Palette value: 0x%hhx", pixel);
     disp_putpixel(disp, st->_col-1, st->_row,
             st->_rgb_palette[pixel*3], st->_rgb_palette[pixel*3+1], st->_rgb_palette[pixel*3+2]);
 }
@@ -225,7 +220,6 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
             // vert(v) = vert(t) if rendering enabled
             if (ppu_st->ppumask.b) {
                 ppu_load_vert_addr(ppu_st);
-                log_warn("Reverting vert addr to 0x%hx", ppu_st->_v.data);
             }
             break;
         case 321 ... 336:

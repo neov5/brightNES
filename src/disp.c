@@ -1,7 +1,7 @@
 #include "disp.h"
 #include "types.h"
 #include "nes.h"
-#include <log.h>
+#include "log.h"
 #include <time.h>
 
 extern nes_state_t state;
