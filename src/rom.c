@@ -18,7 +18,7 @@ void rom_load_from_file(rom_t *rom, char* filename) {
 
     if (access(filename, F_OK) != 0) {
         log_fatal("File does not exist");
-        exit(-1);
+        exit(0);
     }
     char header[16];
 
@@ -28,7 +28,7 @@ void rom_load_from_file(rom_t *rom, char* filename) {
     if (memcmp(header, magic, 4) != 0) {
         log_fatal("File header does not match iNES magic: "
                   "file is not a NES file or is corrupted");
-        exit(-1);
+        exit(0);
     }
 
     rom->prg_rom_size = 16*KB*header[4];
@@ -56,7 +56,7 @@ void rom_load_from_file(rom_t *rom, char* filename) {
         // TODO more mappers
         default:
             log_fatal("Mapper %d is not supported currently\n", mapper);
-            exit(-1);
+            exit(0);
     }
 
 }

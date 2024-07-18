@@ -27,10 +27,18 @@ int log_add_fp(FILE *fp) {
 
 static void _log_event(log_event_t *ev) {
 #ifdef LOG_USE_COLOR
-    fprintf(
-        ev->output, "(cpu: %7llu) (ppu: %7llu) %s%-5s\x1b[0m ",
-        ev->cpu_cycle, ev->ppu_cycle, 
-        level_colors[ev->level], level_strings[ev->level]);
+    if (ev->output == stderr || ev->output == stdout) {
+        fprintf(
+            ev->output, "(cpu: %7llu) (ppu: %7llu) %s%-5s\x1b[0m ",
+            ev->cpu_cycle, ev->ppu_cycle, 
+            level_colors[ev->level], level_strings[ev->level]);
+    }
+    else {
+        fprintf(
+            ev->output, "(cpu: %-8llu) (ppu: %-8llu) %-5s ",
+            state.cpu_cycle, state.ppu_cycle, 
+            level_strings[ev->level]);
+    }
 #else
     fprintf(
         ev->output, "(cpu: %-8llu) (ppu: %-8llu) %-5s ",

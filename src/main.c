@@ -1,8 +1,12 @@
 #include "nes.h"
 #include <stdio.h>
-
+#include "log.h"
 
 int main(int argc, char** argv) {
+
+#ifdef NES_DEBUG
+    log_add_fp(fopen("build/debug/brightnes.log", "w"));
+#endif
 
     if (argc <= 1) {
         printf("ROM path not specified. Exiting.\n");

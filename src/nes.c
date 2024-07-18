@@ -27,7 +27,7 @@ u8 nes_cpu_bus_read(u16 addr) {
             case 2: return ppu_ppustatus_read(&state.ppu_st);
             case 4: return ppu_oamdata_read(&state.ppu_st);
             case 7: return ppu_ppudata_read(&state.ppu_st);
-            default: log_fatal("Cannot read from address 0x%hx", addr); exit(1);
+            default: log_fatal("Cannot read from address 0x%hx", addr); exit(-1);
         }
     }
     else if (addr < 0x4020) return state.cpu_mem.apu_io_reg[addr & 0x3F]; // TODO apu mapping
@@ -64,7 +64,7 @@ void nes_cpu_bus_write(u8 data, u16 addr) {
             case 5: ppu_ppuscroll_write(&state.ppu_st, data); break;
             case 6: ppu_ppuaddr_write(&state.ppu_st, data); break;
             case 7: ppu_ppudata_write(&state.ppu_st, data); break;
-            default: log_fatal("Cannot write to address 0x%hx", addr); exit(1);
+            default: log_fatal("Cannot write to address 0x%hx", addr); exit(-1);
         }
     }
     else if (addr < 0x4020) state.cpu_mem.apu_io_reg[addr & 0x3F] = data;
