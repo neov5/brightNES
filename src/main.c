@@ -10,6 +10,7 @@ int main(int argc, char** argv) {
 
     if (argc <= 1) {
         printf("ROM path not specified. Exiting.\n");
+        return 0;
     }
 
     // TODO palette loading with -p|--palette

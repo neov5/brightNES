@@ -9,15 +9,18 @@ typedef uint8_t u8;
 typedef int8_t s8;
 typedef uint32_t u32;
 
-typedef struct {
-    u8 C: 1;
-    u8 Z: 1;
-    u8 I: 1;
-    u8 D: 1;
-    u8 B: 1;
-    u8 u: 1;
-    u8 V: 1;
-    u8 N: 1;
+typedef union {
+    struct {
+        u8 C: 1;
+        u8 Z: 1;
+        u8 I: 1;
+        u8 D: 1;
+        u8 B: 1;
+        u8 u: 1;
+        u8 V: 1;
+        u8 N: 1;
+    };
+    u8 data;
 } cpu_sr_t;
 
 typedef struct {
@@ -30,6 +33,7 @@ typedef struct {
 
     u8 IRQ;
     u8 NMI;
+    u8 RST;
 
     u8 (*bus_read)(u16);
     void (*bus_write)(u8, u16);
@@ -40,5 +44,6 @@ typedef struct {
 
 int cpu_exec(cpu_state_t *st);
 void cpu_reset(cpu_state_t *st);
+void cpu_state_to_str(cpu_state_t *st, char buf[64]);
 
 #endif

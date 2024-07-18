@@ -94,9 +94,6 @@ typedef struct {
     ppu_status_t ppustatus;
     u8 oamaddr;
     u8 oamdata;
-    u8 ppuscroll;
-    u8 ppuaddr;
-    u8 ppudata;
     u8 oamdma;
 
     u8 oam[0x100];
@@ -110,14 +107,13 @@ typedef struct {
     u8 _rgb_palette[192];
 
     u16 _ppuaddr;
+    u8 _io_bus;
 
     // internal registers
     ppu_vram_addr_t _v;
     ppu_vram_addr_t _t;
     u8 _x; // fine x scroll (3 bits)
     u8 _w; // write toggle (1 bit)
-
-    u16 _addr_buf;
 
     u64 _pix_sr; // 4x8x2 (P2 P1), shifts right
     u8 _pt_addr;
@@ -135,11 +131,10 @@ void ppu_oamdata_write(ppu_state_t *st, u8 data);
 void ppu_ppuaddr_write(ppu_state_t *st, u8 data);
 u8 ppu_ppudata_read(ppu_state_t *st);
 void ppu_ppudata_write(ppu_state_t *st, u8 data);
+u8 ppu_iobus_read(ppu_state_t *st);
 
-// ? should we tick the PPU forward or simply blit it
-// ticking forward seems the best bet. 
-// TODO lot of state machines!
 void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp);
 void ppu_init(ppu_state_t *st);
+void ppu_state_to_str(ppu_state_t *st, char buf[128]);
 
 #endif

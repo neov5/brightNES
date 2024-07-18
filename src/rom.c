@@ -12,7 +12,7 @@
 #include <unistd.h>
 #endif
 
-const char magic[4] = { 0x4E, 0x45, 0x53, 0x1A }; // NES\r
+static const char MAGIC[4] = { 0x4E, 0x45, 0x53, 0x1A }; // NES\r
 
 void rom_load_from_file(rom_t *rom, char* filename) {
 
@@ -25,7 +25,7 @@ void rom_load_from_file(rom_t *rom, char* filename) {
     FILE *rom_file = fopen(filename, "rb");
     fread(header, 16, 1, rom_file);
 
-    if (memcmp(header, magic, 4) != 0) {
+    if (memcmp(header, MAGIC, 4) != 0) {
         log_fatal("File header does not match iNES magic: "
                   "file is not a NES file or is corrupted");
         exit(0);

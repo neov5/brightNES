@@ -3,11 +3,16 @@
 #include "disp.h"
 #include "log.h"
 
+void ppu_state_to_str(ppu_state_t* st, char buf[128]) {
+    snprintf(buf, 128, "[PPU r:%03hd c:%03hd iobus: %02hhx ctrl:%02hhx mask:%02hhx status:%02hhx v:%04hx t:%04hx x:%01hx w:%d addr:%04hx]", 
+            st->_row, st->_col, st->_io_bus, st->ppuctrl.data, st->ppumask.data, st->ppustatus.data, st->_v.data, 
+            st->_t.data, st->_x, st->_w, st->_ppuaddr);
+}
+
 void ppu_reset(ppu_state_t *st) {
     st->ppuctrl.data = 0;
     st->ppumask.data = 0;
     st->ppustatus.S = st->ppustatus.O = st->ppustatus.u = 0;
-    st->ppuscroll = 0;
     // TODO
 }
 
@@ -43,6 +48,7 @@ void ppu_y_incr(ppu_state_t *st) {
 }
 
 u8 ppu_oamdata_read(ppu_state_t *st) {
+    // TODO impl
     return 0;
 }
 
@@ -55,16 +61,26 @@ void ppu_oamaddr_write(ppu_state_t *st, u8 data) {
 }
 
 void ppu_ppuctrl_write(ppu_state_t *st, u8 data) {
-    st->ppuctrl.data = data;
+    log_debug("Setting PPUCTRL to 0x%hhx", data);
+    st->_io_bus = data;
+    st->ppuctrl.data = st->_io_bus;
+    log_debug("PPUCTRL is now 0x%hhx", st->ppuctrl.data);
     st->_t.N = st->ppuctrl.N;
 }
 
 u8 ppu_ppustatus_read(ppu_state_t *st) {
     st->_w = 0;
-    return st->ppustatus.data;
+    st->_io_bus = (st->ppustatus.data & 0xE0) | (st->_io_bus & 0x1F);
+    st->ppustatus.V = 0;
+    return st->_io_bus;
+}
+
+u8 ppu_iobus_read(ppu_state_t *st) {
+    return st->_io_bus;
 }
 
 void ppu_ppuscroll_write(ppu_state_t *st, u8 data) {
+    st->_io_bus = data;
     if (st->_w == 0) {
         st->_t.X = ((data & 0xF8)>>3);
         st->_x = (data & 0x7);
@@ -78,6 +94,7 @@ void ppu_ppuscroll_write(ppu_state_t *st, u8 data) {
 }
 
 void ppu_ppuaddr_write(ppu_state_t *st, u8 data) {
+    st->_io_bus = data;
     u16* _t_raw = (u16*)(&st->_t);
     if (st->_w == 0) {
         *_t_raw = ((*_t_raw)&0xFF) | ((u16)(data & 0x3F)<<8);
@@ -91,22 +108,26 @@ void ppu_ppuaddr_write(ppu_state_t *st, u8 data) {
 }
 
 u8 ppu_ppudata_read(ppu_state_t *st) {
-    u8 retval = st->ppudata;
-    st->ppudata = st->bus_read(st->_v.data);
+    // ROM, RAM takes one extra cycle to read this from outbound memory
+    // palette accesses are done immediately
+    // however, the CPU will have a dummy read so this is ok to do for both
+    st->_io_bus = st->bus_read(st->_v.data);
     if (st->ppuctrl.I == 0) {
         st->_v.data++;
     }
     else {
         st->_v.data += 32;
     }
-    return retval;
+    return st->_io_bus;
 }
 
 void ppu_ppumask_write(ppu_state_t *st, u8 data) {
+    st->_io_bus = data;
     st->ppumask.data = data;
 }
 
 void ppu_ppudata_write(ppu_state_t *st, u8 data) {
+    st->_io_bus = data;
     st->bus_write(data, st->_v.data);
     if (st->ppuctrl.I == 0) {
         st->_v.data++;
@@ -121,6 +142,7 @@ void ppu_ppudata_write(ppu_state_t *st, u8 data) {
 
 // Iteration 1: Don't do any sprite evaluation. Just render the background.
 
+// TODO better name
 void ppu_shift_bufs(ppu_state_t *st) {
     st->_pix_sr |= ((u64)(st->_pix_buf)<<32);
 }
@@ -259,9 +281,10 @@ void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, 
     // TODO garbage nametable fetches - MMC5 uses them?
 }
 
-void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, disp_t *disp) {
+void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
     if (ppu_st->_col == 1) {
         if (ppu_st->ppumask.b) disp_blit(disp); 
+        if (ppu_st->ppuctrl.V == 1) cpu_st->NMI = 1;
         ppu_st->ppustatus.V = 1;
     }
 }
@@ -278,7 +301,7 @@ void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
     switch (ppu_st->_row) {
         case 261: ppu_prerender_scanline_tick(ppu_st, cpu_st, disp); break;
         case 0 ... 239: ppu_render_visible_scanline_tick(ppu_st, cpu_st, disp); break;
-        case 241: ppu_postrender_scanline_tick(ppu_st, disp); break;
+        case 241: ppu_postrender_scanline_tick(ppu_st, cpu_st, disp); break;
     }
 
     ppu_st->_col = (ppu_st->_col+1)%341;

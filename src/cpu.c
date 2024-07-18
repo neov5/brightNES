@@ -6,6 +6,12 @@
 #define hi(u) (((u16)(u))<<8)
 #define lo(u) ((u)&0xFF)
 
+void cpu_state_to_str(cpu_state_t* st, char buf[64]) {
+    snprintf(buf, 64, "[CPU A:%02hhx X:%02hhx Y:%02hhx PC:%04hx S:%02hhx P:%02hhx]", 
+            st->A, st->X, st->Y, st->PC, st->S, st->P.data);
+}
+
+
 void cpu_set_nz(cpu_state_t* st, u8 val) {
     st->P.N = (val >> 7);
     st->P.Z = (val == 0);
@@ -374,6 +380,11 @@ int cpu_exec(cpu_state_t *st) {
         cpu_interrupt(st, 0xFFFE);
         st->IRQ = 0;
         return 2;
+    }
+    if (st->RST == 1 && st->P.I == 0) {
+        cpu_interrupt(st, 0xFFFC);
+        st->IRQ = 0;
+        return 3;
     }
 
     u8 opc = st->bus_read(st->PC++); st->tick();

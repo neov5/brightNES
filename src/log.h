@@ -61,5 +61,6 @@ typedef struct {
 
 void log_log(log_level_t level, const char* fmt, ...);
 int log_add_fp(FILE *fp);
+void log_to_console(bool should_log);
 
 #endif

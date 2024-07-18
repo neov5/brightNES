@@ -6,8 +6,9 @@
 
 extern nes_state_t state;
 
-static FILE *fps[32];
-static int n_fps = 0;
+static FILE *_fps[32];
+static int _n_fps = 0;
+static bool _log_stderr = true;
 
 static const char* level_strings[] = {
     "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
@@ -20,9 +21,13 @@ static const char *level_colors[] = {
 #endif
 
 int log_add_fp(FILE *fp) {
-    if (n_fps == MAX_FILES) return -1;
-    fps[n_fps++] = fp;
+    if (_n_fps == MAX_FILES) return -1;
+    _fps[_n_fps++] = fp;
     return 0;
+}
+
+void log_to_console(bool should_log) {
+    _log_stderr = should_log;
 }
 
 static void _log_event(log_event_t *ev) {
@@ -59,12 +64,14 @@ void log_log(log_level_t level, const char* fmt, ...) {
         .level = level,
     };
 
-    va_start(evt.ap, fmt);
-    _log_event(&evt);
-    va_end(evt.ap);
+    if (_log_stderr) {
+        va_start(evt.ap, fmt);
+        _log_event(&evt);
+        va_end(evt.ap);
+    }
 
-    for (int i=0; i<n_fps; i++) {
-        evt.output = fps[i];
+    for (int i=0; i<_n_fps; i++) {
+        evt.output = _fps[i];
         va_start(evt.ap, fmt);
         _log_event(&evt);
         va_end(evt.ap);

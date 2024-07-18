@@ -18,6 +18,8 @@ const u8 PALETTE_2C02_NTSC[192] = {
     0xa2, 0xae, 0xea, 0xbe, 0xae, 0xe8, 0xe2, 0xb0, 0xb0, 0xb0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
+static char ppu_state_buf[128];
+static char cpu_state_buf[64];
 
 u8 nes_cpu_bus_read(u16 addr) {
     if (addr < 0x2000) return state.cpu_mem.wram[addr & 0x7FF];
@@ -27,7 +29,7 @@ u8 nes_cpu_bus_read(u16 addr) {
             case 2: return ppu_ppustatus_read(&state.ppu_st);
             case 4: return ppu_oamdata_read(&state.ppu_st);
             case 7: return ppu_ppudata_read(&state.ppu_st);
-            default: log_fatal("Cannot read from address 0x%hx", addr); exit(-1);
+            default: return ppu_iobus_read(&state.ppu_st);
         }
     }
     else if (addr < 0x4020) return state.cpu_mem.apu_io_reg[addr & 0x3F]; // TODO apu mapping
@@ -53,6 +55,7 @@ u8 nes_ppu_bus_read(u16 addr) {
 }
 
 void nes_cpu_bus_write(u8 data, u16 addr) {
+    log_debug("CPU writing 0x%hhx to 0x%hx", data, addr);
     if (addr < 0x2000) state.cpu_mem.wram[addr & 0x7FF] = data;
     else if (addr < 0x4000) {
         u16 eaddr = addr & 0x7;
@@ -88,12 +91,14 @@ void nes_ppu_bus_write(u8 data, u16 addr) {
 }
 
 void nes_cpu_tick_callback() {
-    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
-    state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
-    state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
-    state.ppu_cycle++;
+    // TODO loop unroll hinting via pragmas for GCC/clang
+    state.cpu_cycle++;
+    for (int i=0; i<3; i++) {
+        ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+        state.ppu_cycle++;
+        if (state.ppu_cycle % 1000 == 0) {
+        }
+    }
 }
 
 void nes_cpu_init(cpu_state_t *st) {
@@ -101,41 +106,15 @@ void nes_cpu_init(cpu_state_t *st) {
     st->bus_read = &nes_cpu_bus_read;
     st->bus_write = &nes_cpu_bus_write;
 
-    st->A = st->X = st->Y = 0;
-    st->PC = 0;
-    st->PC |= (st->bus_read(0xFFFC));
-    st->PC |= ((u16)st->bus_read(0xFFFD))<<8;
-    st->S = 0xFD;
-    st->P.C = 0;
-    st->P.Z = 0;
-    st->P.I = 1;
-    st->P.D = 0;
-    st->P.V = 0;
-    st->P.N = 0;
     st->P.u = st->P.B = 1;
+    st->RST = 1;
 }
 
 void nes_ppu_init(ppu_state_t *st) {
-    st->_col = 0;
-    st->_row = 261;
-
     st->bus_read = &nes_ppu_bus_read;
     st->bus_write = &nes_ppu_bus_write;
 
     memcpy(st->_rgb_palette, PALETTE_2C02_NTSC, 192);
-
-    st->ppuctrl.data = 0;
-    st->ppumask.data = 0;
-    st->ppustatus.data = 0xA0;
-    st->oamaddr = 0;
-    st->_w = 0;
-    st->ppuscroll = 0;
-    st->ppuaddr = 0;
-    st->ppudata = 0;
-
-    st->_v.data = 0;
-    st->_t.data = 0;
-    st->_x = 0;
 }
 
 void nes_init(char* rom_path) {
@@ -145,6 +124,16 @@ void nes_init(char* rom_path) {
     // cpu init code
     nes_cpu_init(&state.cpu_st);
     nes_ppu_init(&state.ppu_st);
+
+    // ppu takes 4 cycles more than cpu?
+    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    state.ppu_cycle++;
+    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    state.ppu_cycle++;
+    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    state.ppu_cycle++;
+    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    state.ppu_cycle++;
 }
 
 void nes_exit() {
@@ -165,10 +154,36 @@ bool nes_update_events() {
     return exit;
 }
 
+u64 breakpoint = 0;
+bool stepping = false;
+char input_buf[64];
+
 void nes_render_frame() {
+#ifdef NES_DEBUG
     while (!state.frame_done) {
         cpu_exec(&state.cpu_st);
-        state.cpu_cycle++;
+        if ((stepping && state.cpu_cycle >= breakpoint) || (!stepping)) {
+            printf("%lld\n", breakpoint);
+            stepping = false;
+            ppu_state_to_str(&state.ppu_st, ppu_state_buf);
+            log_debug(ppu_state_buf);
+            cpu_state_to_str(&state.cpu_st, cpu_state_buf);
+            log_debug(cpu_state_buf);
+            printf("> ");
+            fgets(input_buf, 64, stdin);
+            char ch = input_buf[0];
+            if (ch == 'e') exit(0);
+            else if (ch == 's') {
+                breakpoint = strtol(input_buf+2, NULL, 10);
+                stepping = true;
+            }
+        }
     }
     state.frame_done = false;
+#else
+    while (!state.frame_done) {
+        cpu_exec(&state.cpu_st);
+    }
+    state.frame_done = false;
+#endif
 }
