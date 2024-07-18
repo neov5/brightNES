@@ -20,7 +20,7 @@ const u8 PALETTE_2C02_NTSC[192] = {
 
 
 u8 nes_cpu_bus_read(u16 addr) {
-    log_debug("CPU bus reading from 0x%x", addr);
+    // log_debug("CPU bus reading from 0x%x", addr);
     if (addr < 0x2000) return state.cpu_mem.wram[addr & 0x7FF];
     else if (addr < 0x4000) {
         u16 eaddr = addr & 0x7;
@@ -36,7 +36,7 @@ u8 nes_cpu_bus_read(u16 addr) {
 }
 
 u8 nes_ppu_bus_read(u16 addr) {
-    log_info("PPU bus reading from 0x%x", addr);
+    // log_info("PPU bus reading from 0x%x", addr);
     if (addr < 0x2000) return state.rom.mapper.ppu_read(&state.rom, addr);
     else if (addr < 0x3000) {
         u16 eaddr = addr & 0x7FF;
@@ -55,7 +55,7 @@ u8 nes_ppu_bus_read(u16 addr) {
 }
 
 void nes_cpu_bus_write(u8 data, u16 addr) {
-    log_debug("CPU bus writing 0x%xb to 0x%x", data, addr);
+    // log_debug("CPU bus writing 0x%xb to 0x%x", data, addr);
     if (addr < 0x2000) state.cpu_mem.wram[addr & 0x7FF] = data;
     else if (addr < 0x4000) {
         u16 eaddr = addr & 0x7;
@@ -75,7 +75,7 @@ void nes_cpu_bus_write(u8 data, u16 addr) {
 }
 
 void nes_ppu_bus_write(u8 data, u16 addr) {
-    log_info("PPU bus writing 0x%hhx to 0x%hx", data, addr);
+    // log_info("PPU bus writing 0x%hhx to 0x%hx", data, addr);
     if (addr < 0x2000) state.rom.mapper.ppu_write(&state.rom, data, addr);
     else if (addr < 0x3000) {
         u16 eaddr = addr & 0x7FF;
@@ -126,6 +126,19 @@ void nes_ppu_init(ppu_state_t *st) {
     st->bus_write = &nes_ppu_bus_write;
 
     memcpy(st->_rgb_palette, PALETTE_2C02_NTSC, 192);
+
+    st->ppuctrl.data = 0;
+    st->ppumask.data = 0;
+    st->ppustatus.data = 0xA0;
+    st->oamaddr = 0;
+    st->_w = 0;
+    st->ppuscroll = 0;
+    st->ppuaddr = 0;
+    st->ppudata = 0;
+
+    st->_v.data = 0;
+    st->_t.data = 0;
+    st->_x = 0;
 }
 
 void nes_init(char* rom_path) {

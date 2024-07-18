@@ -137,6 +137,7 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     u8 pixel = (st->_pix_sr & (0xFU << st->_x))>>st->_x;
     // 4 bit pixel lookup value
     // since this is a background sprite, look up the background palette (MSB=0)
+    log_info("Palette value: 0x%hhx", pixel);
     disp_putpixel(disp, st->_col-1, st->_row,
             st->_rgb_palette[pixel*3], st->_rgb_palette[pixel*3+1], st->_rgb_palette[pixel*3+2]);
 }
@@ -222,11 +223,16 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
             break;
         case 280 ... 304:
             // vert(v) = vert(t) if rendering enabled
-            if (ppu_st->ppumask.b) ppu_load_vert_addr(ppu_st);
+            if (ppu_st->ppumask.b) {
+                ppu_load_vert_addr(ppu_st);
+                log_warn("Reverting vert addr to 0x%hx", ppu_st->_v.data);
+            }
             break;
         case 321 ... 336:
-            ppu_shift_pix_sr(ppu_st);
-            ppu_get_next_pixel(ppu_st);
+            if (ppu_st->ppumask.b) {
+                ppu_shift_pix_sr(ppu_st);
+                ppu_get_next_pixel(ppu_st);
+            }
             break;
     }
 }
@@ -238,24 +244,30 @@ void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, 
     }
     else if (ppu_st->_col <= 256) {
         // blit current pixel onto display
-        ppu_put_pixel(ppu_st, disp);
-        ppu_shift_pix_sr(ppu_st);
-        ppu_get_next_pixel(ppu_st);
+        if (ppu_st->ppumask.b) {
+            ppu_put_pixel(ppu_st, disp);
+            ppu_shift_pix_sr(ppu_st);
+            ppu_get_next_pixel(ppu_st);
+        }
     }
     else if (ppu_st->_col == 257) {
-        ppu_load_horiz_addr(ppu_st);
+        if (ppu_st->ppumask.b) {
+            ppu_load_horiz_addr(ppu_st);
+        }
         // hori(v) = hori(t)
     }
     else if (ppu_st->_col >= 321 && ppu_st->_col <= 336) {
-        ppu_shift_pix_sr(ppu_st);
-        ppu_get_next_pixel(ppu_st);
+        if (ppu_st->ppumask.b) {
+            ppu_shift_pix_sr(ppu_st);
+            ppu_get_next_pixel(ppu_st);
+        }
     }
     // TODO garbage nametable fetches - MMC5 uses them?
 }
 
 void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, disp_t *disp) {
     if (ppu_st->_col == 1) {
-        disp_blit(disp); 
+        if (ppu_st->ppumask.b) disp_blit(disp); 
         ppu_st->ppustatus.V = 1;
     }
 }
