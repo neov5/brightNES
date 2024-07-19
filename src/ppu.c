@@ -48,16 +48,15 @@ void ppu_y_incr(ppu_state_t *st) {
 }
 
 u8 ppu_oamdata_read(ppu_state_t *st) {
-    // TODO impl
-    return 0;
+    return st->oam[st->oamaddr];
 }
 
 void ppu_oamdata_write(ppu_state_t *st, u8 data) {
-    // TODO impl
+    st->oam[st->oamaddr++] = data;
 }
 
 void ppu_oamaddr_write(ppu_state_t *st, u8 data) {
-    // TODO impl
+    st->oamaddr = data;
 }
 
 void ppu_ppuctrl_write(ppu_state_t *st, u8 data) {
@@ -153,10 +152,12 @@ void ppu_shift_pix_sr(ppu_state_t *st) {
 
 void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     u8 pixel = (st->_pix_sr & (0xFU << st->_x))>>st->_x;
+    log_info("Palette lookup pixel: %d", pixel);
     // 4 bit pixel lookup value
     // since this is a background sprite, look up the background palette (MSB=0)
     disp_putpixel(disp, st->_col-1, st->_row,
             st->_rgb_palette[pixel*3], st->_rgb_palette[pixel*3+1], st->_rgb_palette[pixel*3+2]);
+    log_info("pixel data register is now 0x%016llx", st->_pix_sr);
 }
 
 void ppu_get_next_pixel(ppu_state_t *st) {
@@ -165,7 +166,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         u16 nt_addr = 0x2000 | (st->_v.data & 0x0FFF);
         st->_pt_addr = st->bus_read(nt_addr);
         // log_info("tile ptr addr: 0x%hx", nt_addr);
-        // log_info("Pattern table ptr addr: 0x%hhx", st->_pt_addr);
+        log_info("Pattern table ptr addr: 0x%hhx", st->_pt_addr);
     }
     else if (st->_col % 8 == 4) {
         // attribute table fetch
@@ -183,6 +184,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         st->_pix_buf |= (st->_pix_buf << 4);
         st->_pix_buf |= (st->_pix_buf << 8);
         st->_pix_buf |= (st->_pix_buf << 16);
+        log_info("pixel buffer after loading at bits (0x%x) is 0x%08llx", pal_idx, st->_pix_buf);
     }
     else if (st->_col % 8 == 6) {
         // BG LSBits fetch
@@ -193,28 +195,36 @@ void ppu_get_next_pixel(ppu_state_t *st) {
             .H = st->ppuctrl.B,
             .Z = 0
         };
-        u32 bg_lsb = st->bus_read(pt_lsb_addr.data);
+        log_info("pt addr is 0x%02x", st->_pt_addr);
+        log_info("lsb addr is 0x%04x", pt_lsb_addr.data);
+        u8 lsb = st->bus_read(pt_lsb_addr.data);
+        u32 bg_lsb = lsb;
         bg_lsb = (bg_lsb | (bg_lsb << 12)) & 0x000F000F;
         bg_lsb = (bg_lsb | (bg_lsb << 6)) & 0x03030303;
         bg_lsb = (bg_lsb | (bg_lsb << 3)) & 0x11111111;
         st->_pix_buf |= (bg_lsb << 3);
+        log_info("pixel buffer after loading lsb (0x%x) is 0x%08llx", bg_lsb, st->_pix_buf);
     }
     else if (st->_col % 8 == 0) {
         // BG MSBits fetch
-        ppu_pt_addr_t pt_lsb_addr = {
+        ppu_pt_addr_t pt_msb_addr = {
             .y = st->_v.y,
             .P = 1,
             .N = st->_pt_addr,
             .H = st->ppuctrl.B,
             .Z = 0
         };
-        u32 bg_msb = st->bus_read(pt_lsb_addr.data);
+        log_info("pt addr is 0x%02x", st->_pt_addr);
+        log_info("msb addr is 0x%04x", pt_msb_addr.data);
+        u8 msb = st->bus_read(pt_msb_addr.data);
+        u32 bg_msb = msb;
         bg_msb = (bg_msb | (bg_msb << 12)) & 0x000F000F;
         bg_msb = (bg_msb | (bg_msb << 6)) & 0x03030303;
         bg_msb = (bg_msb | (bg_msb << 3)) & 0x11111111;
         st->_pix_buf |= (bg_msb << 4);
 
         // TODO incr horiz v 
+        log_info("pixel buffer after loading msb (0x%x) is 0x%08llx", bg_msb, st->_pix_buf);
         ppu_shift_bufs(st);
         ppu_coarse_x_incr(st);
         if (st->_col == 256) ppu_y_incr(st);
@@ -236,7 +246,6 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
     switch (ppu_st->_col) {
         case 1:
             ppu_st->ppustatus.V = ppu_st->ppustatus.S = ppu_st->ppustatus.O = 0;
-            if (ppu_st->ppuctrl.V == 1) cpu_st->NMI = 1;
             break;
         case 280 ... 304:
             // vert(v) = vert(t) if rendering enabled
@@ -284,8 +293,10 @@ void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, 
 void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
     if (ppu_st->_col == 1) {
         if (ppu_st->ppumask.b) disp_blit(disp); 
-        if (ppu_st->ppuctrl.V == 1) cpu_st->NMI = 1;
         ppu_st->ppustatus.V = 1;
+    }
+    else if (ppu_st->_col == 2) {
+        if (ppu_st->ppuctrl.V == 1) cpu_st->NMI = 1;
     }
 }
 

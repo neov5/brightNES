@@ -283,7 +283,7 @@ void cpu_icl_branch(cpu_state_t *st, bool (*branch)(cpu_state_t*)) {
     st->tick(); // 3 (if branch is taken)
     u16 old_pc = st->PC;
     st->PC = old_pc + op;
-    if ((old_pc&0xFF) + op > 0xFF) st->tick(); // 4 (if page changes)
+    if ((u16)((s16)(old_pc&0xFF) + op) > 0xFF) st->tick(); // 4 (if page changes)
 }
 
 // zero-page indirect preindexed [($nn, X)]
@@ -357,6 +357,7 @@ void cpu_reset(cpu_state_t *st) {
 }
 
 void cpu_interrupt(cpu_state_t *st, u16 pc_addr) {
+    log_debug("CPU interrupted, going to 0x%hx", pc_addr);
     st->tick(); // 1
     st->tick(); // 2
     st->bus_write(lo((st->PC&0xFF00)>>8), 0x100 + (st->S--)); st->tick(); // 3

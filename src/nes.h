@@ -5,6 +5,7 @@
 #include "ppu.h"
 #include "mem.h"
 #include "rom.h"
+#include "dma.h"
 
 typedef struct {
 
@@ -18,6 +19,7 @@ typedef struct {
     disp_t disp;
 
     bool frame_done;
+    dma_oam_t dma_oam;
 
     u64 ppu_cycle;
     u64 cpu_cycle;

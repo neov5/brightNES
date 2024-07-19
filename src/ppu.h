@@ -75,13 +75,13 @@ typedef union {
     u16 data;
 } ppu_at_addr_t;
 
-typedef struct {
+typedef union {
     struct {
         u16 y: 3; // LSB
         u16 P: 1;
         u16 N: 8;
         u16 H: 1;
-        u16 Z: 1; // MSB
+        u16 Z: 3; // MSB
     };
     u16 data;
 } ppu_pt_addr_t;

@@ -1,5 +1,6 @@
 #include "nes.h"
 #include "log.h"
+#include "dma.h"
 
 nes_state_t state;
 
@@ -70,7 +71,15 @@ void nes_cpu_bus_write(u8 data, u16 addr) {
             default: log_fatal("Cannot write to address 0x%hx", addr); exit(-1);
         }
     }
-    else if (addr < 0x4020) state.cpu_mem.apu_io_reg[addr & 0x3F] = data;
+    else if (addr < 0x4020) {
+        if (addr == 0x4014) {
+            state.dma_oam.enabled = true;
+            state.dma_oam.addr = data;
+        }
+        else {
+            state.cpu_mem.apu_io_reg[addr & 0x3F] = data;
+        }
+    }
     else state.rom.mapper.cpu_write(&state.rom, data, addr & 0x7FFF);
 }
 
@@ -161,9 +170,16 @@ char input_buf[64];
 void nes_render_frame() {
 #ifdef NES_DEBUG
     while (!state.frame_done) {
+        if (state.dma_oam.enabled) {
+            u64 cin = state.cpu_cycle;
+            if (state.cpu_cycle % 2 == 0) state.cpu_st.tick();
+            dma_oam(&state.dma_oam, &state.cpu_st, &state.ppu_st);
+            u64 cout = state.cpu_cycle;
+            log_debug("DMA took %ld cycles", cout-cin);
+            state.dma_oam.enabled = false;
+        }
         cpu_exec(&state.cpu_st);
         if ((stepping && state.cpu_cycle >= breakpoint) || (!stepping)) {
-            printf("%lld\n", breakpoint);
             stepping = false;
             ppu_state_to_str(&state.ppu_st, ppu_state_buf);
             log_debug(ppu_state_buf);
@@ -182,6 +198,10 @@ void nes_render_frame() {
     state.frame_done = false;
 #else
     while (!state.frame_done) {
+        if (state.dma_oam.enabled) {
+            if (state.cpu_cycle % 2 != 0) state.cpu_st.tick();
+            dma_oam(&state.dma_oam, &state.cpu_st, &state.ppu_st);
+        }
         cpu_exec(&state.cpu_st);
     }
     state.frame_done = false;
