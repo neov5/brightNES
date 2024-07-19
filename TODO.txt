@@ -1,4 +1,6 @@
-- [ ] Logging
-- [ ] Debug and Release flags
-- [ ] imgui load as library
-- [ ] Debug UI
+- [X] Logging
+- [X] Debug and Release flags
+- [ ] imgui load as library (skip?)
+- [ ] Debugging UI (skip?)
+- [ ] PPU skip cycle on odd frame
+- [ ] Debug palette
