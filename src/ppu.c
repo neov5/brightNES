@@ -143,15 +143,18 @@ void ppu_ppudata_write(ppu_state_t *st, u8 data) {
 
 // TODO better name
 void ppu_shift_bufs(ppu_state_t *st) {
-    st->_pix_sr |= ((u64)(st->_pix_buf)<<32);
+    st->_pix_sr |= st->_pix_buf;
 }
 
 void ppu_shift_pix_sr(ppu_state_t *st) {
-    st->_pix_sr >>= 4;
+    st->_pix_sr <<= 4;
 }
 
 void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
-    u8 pixel = (st->_pix_sr & (0xFU << st->_x))>>st->_x;
+    u8 shift = 60 - (st->_x*4);
+    u64 mask = 0xFULL << shift;
+    log_info("mask: 0x%016llx", mask);
+    u8 pixel = (st->_pix_sr & mask)>>shift;
     log_info("Palette lookup pixel: %d", pixel);
     // 4 bit pixel lookup value
     // since this is a background sprite, look up the background palette (MSB=0)
@@ -184,6 +187,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         st->_pix_buf |= (st->_pix_buf << 4);
         st->_pix_buf |= (st->_pix_buf << 8);
         st->_pix_buf |= (st->_pix_buf << 16);
+        st->_pix_buf <<= 2;
         log_info("pixel buffer after loading at bits (0x%x) is 0x%08llx", pal_idx, st->_pix_buf);
     }
     else if (st->_col % 8 == 6) {
@@ -202,7 +206,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         bg_lsb = (bg_lsb | (bg_lsb << 12)) & 0x000F000F;
         bg_lsb = (bg_lsb | (bg_lsb << 6)) & 0x03030303;
         bg_lsb = (bg_lsb | (bg_lsb << 3)) & 0x11111111;
-        st->_pix_buf |= (bg_lsb << 3);
+        st->_pix_buf |= bg_lsb;
         log_info("pixel buffer after loading lsb (0x%x) is 0x%08llx", bg_lsb, st->_pix_buf);
     }
     else if (st->_col % 8 == 0) {
@@ -221,7 +225,7 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         bg_msb = (bg_msb | (bg_msb << 12)) & 0x000F000F;
         bg_msb = (bg_msb | (bg_msb << 6)) & 0x03030303;
         bg_msb = (bg_msb | (bg_msb << 3)) & 0x11111111;
-        st->_pix_buf |= (bg_msb << 4);
+        st->_pix_buf |= (bg_msb << 1);
 
         // TODO incr horiz v 
         log_info("pixel buffer after loading msb (0x%x) is 0x%08llx", bg_msb, st->_pix_buf);

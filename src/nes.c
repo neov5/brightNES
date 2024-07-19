@@ -163,8 +163,8 @@ bool nes_update_events() {
     return exit;
 }
 
-u64 breakpoint = 0;
-bool stepping = false;
+u64 breakpoint = 178691;
+bool stepping = true;
 char input_buf[64];
 
 void nes_render_frame() {
