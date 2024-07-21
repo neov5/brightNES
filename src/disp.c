@@ -16,7 +16,11 @@ int disp_init(disp_t *disp) {
         return err;
     }
 
+#ifdef NES_DEBUG
+    disp->win = SDL_CreateWindow("", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
+#else
     disp->win = SDL_CreateWindow("brightNES", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
+#endif
     if (disp->win == NULL) {
         log_fatal("Could not create Window: %s", SDL_GetError());
         SDL_Quit();

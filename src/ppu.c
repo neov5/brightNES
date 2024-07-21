@@ -136,8 +136,33 @@ void ppu_ppudata_write(ppu_state_t *st, u8 data) {
     }
 }
 
+u8 ppu_palette_ram_read(ppu_state_t *st, u8 addr) {
+    switch (addr) {
+        // mirrors
+        case 0x00: case 0x10:
+        case 0x04: case 0x14:
+        case 0x08: case 0x18:
+        case 0x0C: case 0x1C: 
+            return st->palette_ram[addr & 0xF];
+        default: 
+            return st->palette_ram[addr];
+    }
+}
+
+void ppu_palette_ram_write(ppu_state_t *st, u8 addr, u8 data) {
+    switch (addr) {
+        // mirrors
+        case 0x00: case 0x10:
+        case 0x04: case 0x14:
+        case 0x08: case 0x18:
+        case 0x0C: case 0x1C: 
+            st->palette_ram[addr & 0xF] = data; break;
+        default: 
+            st->palette_ram[addr] = data; break;
+    }
+}
+
 // TODO sprite evaluation
-// TODO swap out all the ugly structs with unions and raw data access
 
 // Iteration 1: Don't do any sprite evaluation. Just render the background.
 
@@ -154,12 +179,10 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     u8 shift = 60 - (st->_x*4);
     u64 mask = 0xFULL << shift;
     log_info("mask: 0x%016llx", mask);
-    u8 pixel = (st->_pix_sr & mask)>>shift;
-    log_info("Palette lookup pixel: %d", pixel);
-    // 4 bit pixel lookup value
-    // since this is a background sprite, look up the background palette (MSB=0)
+    u8 palette_ram_idx = (st->_pix_sr & mask)>>shift;
+    u8 palette_idx = ppu_palette_ram_read(st, palette_ram_idx);
     disp_putpixel(disp, st->_col-1, st->_row,
-            st->_rgb_palette[pixel*3], st->_rgb_palette[pixel*3+1], st->_rgb_palette[pixel*3+2]);
+            st->_rgb_palette[palette_idx*3], st->_rgb_palette[palette_idx*3+1], st->_rgb_palette[palette_idx*3+2]);
     log_info("pixel data register is now 0x%016llx", st->_pix_sr);
 }
 
@@ -182,7 +205,9 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         };
         u8 at_blk = st->bus_read(at_addr.data);
         u8 shift_idx = (st->_v.X & 0x2)>>1 | (st->_v.Y & 0x2);
+        shift_idx *= 2;
         u32 pal_idx = (at_blk & (0x3 << shift_idx)) >> shift_idx;
+        log_info("x: 0x%hx, y: 0x%hx, at_addr: 0x%hx, at: 0x%hhx", st->_v.X, st->_v.Y, at_addr.data, at_blk);
         st->_pix_buf = pal_idx;
         st->_pix_buf |= (st->_pix_buf << 4);
         st->_pix_buf |= (st->_pix_buf << 8);
@@ -261,6 +286,18 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
             if (ppu_st->ppumask.b) {
                 ppu_shift_pix_sr(ppu_st);
                 ppu_get_next_pixel(ppu_st);
+            }
+            break;
+        case 339:
+            if (!ppu_st->_init_done) {
+                ppu_st->_init_done = true;
+                ppu_st->_frame_ctr = 0;
+            }
+            else {
+                if (ppu_st->_frame_ctr >= 2 && ppu_st->_frame_ctr % 2 == 0) {
+                    ppu_st->_col++; // skip on odd;
+                }
+                ppu_st->_frame_ctr++;
             }
             break;
     }

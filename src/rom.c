@@ -31,8 +31,8 @@ void rom_load_from_file(rom_t *rom, char* filename) {
         exit(0);
     }
 
-    rom->prg_rom_size = 16*KB*header[4];
-    rom->chr_rom_size = 8*KB*header[5];
+    rom->prg_rom_size = 16*0x400*header[4]; // 16 kB * val
+    rom->chr_rom_size = 8*0x400*header[5]; // 8 kB * val
 
     u8 mapper = ((header[6] & 0xF0)>>4) | (header[7] & 0xF0);
     rom->mirror_type = (header[6] & 1) ? HORIZONTAL : VERTICAL;

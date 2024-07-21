@@ -52,7 +52,7 @@ u8 nes_ppu_bus_read(u16 addr) {
         // TODO more mapping types
     }
     else if (addr < 0x3F00) return 0;
-    else return state.ppu_st.palette_ram[addr & 0x1F];
+    else return ppu_palette_ram_read(&state.ppu_st, addr & 0x1F);
 }
 
 void nes_cpu_bus_write(u8 data, u16 addr) {
@@ -96,7 +96,7 @@ void nes_ppu_bus_write(u8 data, u16 addr) {
         // TODO more mapping types
     }
     else if (addr < 0x3F00) { /* do nothing */ }
-    else state.ppu_st.palette_ram[addr & 0x1F] = data;
+    else ppu_palette_ram_write(&state.ppu_st, addr & 0x1F, data);
 }
 
 void nes_cpu_tick_callback() {
@@ -163,7 +163,7 @@ bool nes_update_events() {
     return exit;
 }
 
-u64 breakpoint = 178691;
+u64 breakpoint = 0;
 bool stepping = true;
 char input_buf[64];
 

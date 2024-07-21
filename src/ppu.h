@@ -102,6 +102,10 @@ typedef struct {
     u8 (*bus_read)(u16);
     void (*bus_write)(u8, u16);
 
+    bool _init_done;
+    bool _odd_frame;
+    u64 _frame_ctr;
+
     u16 _row;
     u16 _col;
     u8 _rgb_palette[192];
@@ -132,6 +136,8 @@ void ppu_ppuaddr_write(ppu_state_t *st, u8 data);
 u8 ppu_ppudata_read(ppu_state_t *st);
 void ppu_ppudata_write(ppu_state_t *st, u8 data);
 u8 ppu_iobus_read(ppu_state_t *st);
+void ppu_palette_ram_write(ppu_state_t *st, u8 addr, u8 data);
+u8 ppu_palette_ram_read(ppu_state_t *st, u8 addr);
 
 void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp);
 void ppu_init(ppu_state_t *st);
