@@ -56,7 +56,6 @@ u8 nes_ppu_bus_read(u16 addr) {
 }
 
 void nes_cpu_bus_write(u8 data, u16 addr) {
-    log_debug("CPU writing 0x%hhx to 0x%hx", data, addr);
     if (addr < 0x2000) state.cpu_mem.wram[addr & 0x7FF] = data;
     else if (addr < 0x4000) {
         u16 eaddr = addr & 0x7;

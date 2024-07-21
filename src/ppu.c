@@ -18,6 +18,7 @@ void ppu_reset(ppu_state_t *st) {
 
 // https://www.nesdev.org/wiki/PPU_scrolling#Coarse_X_increment
 void ppu_coarse_x_incr(ppu_state_t *st) {
+    log_debug("Incrementing coarse X");
     if (st->_v.X == 0x1F) {
         st->_v.X = 0;
         st->_v.N ^= 1; // switch horizontal nametable
@@ -178,12 +179,10 @@ void ppu_shift_pix_sr(ppu_state_t *st) {
 void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     u8 shift = 60 - (st->_x*4);
     u64 mask = 0xFULL << shift;
-    log_info("mask: 0x%016llx", mask);
     u8 palette_ram_idx = (st->_pix_sr & mask)>>shift;
     u8 palette_idx = ppu_palette_ram_read(st, palette_ram_idx);
     disp_putpixel(disp, st->_col-1, st->_row,
             st->_rgb_palette[palette_idx*3], st->_rgb_palette[palette_idx*3+1], st->_rgb_palette[palette_idx*3+2]);
-    log_info("pixel data register is now 0x%016llx", st->_pix_sr);
 }
 
 void ppu_get_next_pixel(ppu_state_t *st) {
@@ -191,8 +190,6 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         // nametable fetch
         u16 nt_addr = 0x2000 | (st->_v.data & 0x0FFF);
         st->_pt_addr = st->bus_read(nt_addr);
-        // log_info("tile ptr addr: 0x%hx", nt_addr);
-        log_info("Pattern table ptr addr: 0x%hhx", st->_pt_addr);
     }
     else if (st->_col % 8 == 4) {
         // attribute table fetch
@@ -207,13 +204,11 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         u8 shift_idx = (st->_v.X & 0x2)>>1 | (st->_v.Y & 0x2);
         shift_idx *= 2;
         u32 pal_idx = (at_blk & (0x3 << shift_idx)) >> shift_idx;
-        log_info("x: 0x%hx, y: 0x%hx, at_addr: 0x%hx, at: 0x%hhx", st->_v.X, st->_v.Y, at_addr.data, at_blk);
         st->_pix_buf = pal_idx;
         st->_pix_buf |= (st->_pix_buf << 4);
         st->_pix_buf |= (st->_pix_buf << 8);
         st->_pix_buf |= (st->_pix_buf << 16);
         st->_pix_buf <<= 2;
-        log_info("pixel buffer after loading at bits (0x%x) is 0x%08llx", pal_idx, st->_pix_buf);
     }
     else if (st->_col % 8 == 6) {
         // BG LSBits fetch
@@ -224,15 +219,12 @@ void ppu_get_next_pixel(ppu_state_t *st) {
             .H = st->ppuctrl.B,
             .Z = 0
         };
-        log_info("pt addr is 0x%02x", st->_pt_addr);
-        log_info("lsb addr is 0x%04x", pt_lsb_addr.data);
         u8 lsb = st->bus_read(pt_lsb_addr.data);
         u32 bg_lsb = lsb;
         bg_lsb = (bg_lsb | (bg_lsb << 12)) & 0x000F000F;
         bg_lsb = (bg_lsb | (bg_lsb << 6)) & 0x03030303;
         bg_lsb = (bg_lsb | (bg_lsb << 3)) & 0x11111111;
         st->_pix_buf |= bg_lsb;
-        log_info("pixel buffer after loading lsb (0x%x) is 0x%08llx", bg_lsb, st->_pix_buf);
     }
     else if (st->_col % 8 == 0) {
         // BG MSBits fetch
@@ -243,8 +235,6 @@ void ppu_get_next_pixel(ppu_state_t *st) {
             .H = st->ppuctrl.B,
             .Z = 0
         };
-        log_info("pt addr is 0x%02x", st->_pt_addr);
-        log_info("msb addr is 0x%04x", pt_msb_addr.data);
         u8 msb = st->bus_read(pt_msb_addr.data);
         u32 bg_msb = msb;
         bg_msb = (bg_msb | (bg_msb << 12)) & 0x000F000F;
@@ -252,8 +242,6 @@ void ppu_get_next_pixel(ppu_state_t *st) {
         bg_msb = (bg_msb | (bg_msb << 3)) & 0x11111111;
         st->_pix_buf |= (bg_msb << 1);
 
-        // TODO incr horiz v 
-        log_info("pixel buffer after loading msb (0x%x) is 0x%08llx", bg_msb, st->_pix_buf);
         ppu_shift_bufs(st);
         ppu_coarse_x_incr(st);
         if (st->_col == 256) ppu_y_incr(st);
@@ -275,6 +263,13 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
     switch (ppu_st->_col) {
         case 1:
             ppu_st->ppustatus.V = ppu_st->ppustatus.S = ppu_st->ppustatus.O = 0;
+            break;
+        case 8 ... 256:
+            if (ppu_st->_col % 8 == 0) ppu_coarse_x_incr(ppu_st);
+            if (ppu_st->_col == 256) ppu_y_incr(ppu_st);
+            break;
+        case 257:
+            ppu_load_horiz_addr(ppu_st);
             break;
         case 280 ... 304:
             // vert(v) = vert(t) if rendering enabled
@@ -348,7 +343,6 @@ void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
     // a single cycle
 
     // TODO sprite evaluation
-    // TODO rendering (read nametable byte, attribute byte, pattern table lo/hi tile)
 
     switch (ppu_st->_row) {
         case 261: ppu_prerender_scanline_tick(ppu_st, cpu_st, disp); break;
