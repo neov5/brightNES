@@ -265,11 +265,15 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
             ppu_st->ppustatus.V = ppu_st->ppustatus.S = ppu_st->ppustatus.O = 0;
             break;
         case 8 ... 256:
-            if (ppu_st->_col % 8 == 0) ppu_coarse_x_incr(ppu_st);
-            if (ppu_st->_col == 256) ppu_y_incr(ppu_st);
+            if (ppu_st->ppumask.b) {
+                if (ppu_st->_col % 8 == 0) ppu_coarse_x_incr(ppu_st);
+                if (ppu_st->_col == 256) ppu_y_incr(ppu_st);
+            }
             break;
         case 257:
-            ppu_load_horiz_addr(ppu_st);
+            if (ppu_st->ppumask.b) {
+                ppu_load_horiz_addr(ppu_st);
+            }
             break;
         case 280 ... 304:
             // vert(v) = vert(t) if rendering enabled
@@ -338,6 +342,8 @@ void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp
 
 void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
 
+    ppu_st->_col = (ppu_st->_col+1)%341;
+    if (ppu_st->_col == 0) ppu_st->_row = (ppu_st->_row+1)%262;
     // tick forward and produce one pixel worth of data 
     // it's okay to coalesce processing logic and do multiple pixel writes in 
     // a single cycle
@@ -350,7 +356,5 @@ void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
         case 241: ppu_postrender_scanline_tick(ppu_st, cpu_st, disp); break;
     }
 
-    ppu_st->_col = (ppu_st->_col+1)%341;
-    if (ppu_st->_col == 0) ppu_st->_row = (ppu_st->_row+1)%262;
 
 }

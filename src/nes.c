@@ -121,6 +121,8 @@ void nes_cpu_init(cpu_state_t *st) {
 void nes_ppu_init(ppu_state_t *st) {
     st->bus_read = &nes_ppu_bus_read;
     st->bus_write = &nes_ppu_bus_write;
+    // st->_row = 261;
+    // st->_col = -1;
 
     memcpy(st->_rgb_palette, PALETTE_2C02_NTSC, 192);
 }

@@ -106,8 +106,8 @@ typedef struct {
     bool _odd_frame;
     u64 _frame_ctr;
 
-    u16 _row;
-    u16 _col;
+    s16 _row;
+    s16 _col;
     u8 _rgb_palette[192];
 
     u16 _ppuaddr;
