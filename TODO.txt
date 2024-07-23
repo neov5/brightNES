@@ -2,5 +2,8 @@
 - [X] Debug and Release flags
 - [ ] imgui load as library (skip?)
 - [ ] Debugging UI (skip?)
-- [ ] PPU skip cycle on odd frame
-- [ ] Debug palette
+- [X] PPU skip cycle on odd frame
+- [X] Debug palette
+
+Cycles:
+- 11554831 (CPU out of sync)

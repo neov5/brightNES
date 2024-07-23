@@ -18,7 +18,6 @@ void ppu_reset(ppu_state_t *st) {
 
 // https://www.nesdev.org/wiki/PPU_scrolling#Coarse_X_increment
 void ppu_coarse_x_incr(ppu_state_t *st) {
-    log_debug("Incrementing coarse X");
     if (st->_v.X == 0x1F) {
         st->_v.X = 0;
         st->_v.N ^= 1; // switch horizontal nametable
@@ -293,8 +292,12 @@ void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_
                 ppu_st->_frame_ctr = 0;
             }
             else {
-                if (ppu_st->_frame_ctr >= 2 && ppu_st->_frame_ctr % 2 == 0) {
-                    ppu_st->_col++; // skip on odd;
+                if (ppu_st->ppumask.b || ppu_st->ppumask.s) {
+                    // if rendering is enabled, skip the last cycle on odd frames
+                    // TODO confirm 'rendering enabled' = either b or s is on
+                    if (ppu_st->_frame_ctr >= 2 && ppu_st->_frame_ctr % 2 == 0) {
+                        ppu_st->_col++; // skip on odd;
+                    }
                 }
                 ppu_st->_frame_ctr++;
             }
@@ -335,10 +338,17 @@ void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp
         if (ppu_st->ppumask.b) disp_blit(disp); 
         ppu_st->ppustatus.V = 1;
     }
-    else if (ppu_st->_col == 2) {
+    else if (ppu_st->_col == 3) {
         if (ppu_st->ppuctrl.V == 1) cpu_st->NMI = 1;
     }
 }
+
+// TODO we are one cycle behind on some frames. I guess it's a timing issue.
+// Check the skip cycle.
+//
+// The bug is right above, with the timing of NMI mattering. Some times the 
+// instruction after the NMI is supposed to execute, and it doesn't.
+// Also the skip cycle can be disabled!
 
 void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
 

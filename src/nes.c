@@ -41,15 +41,17 @@ u8 nes_ppu_bus_read(u16 addr) {
     if (addr < 0x2000) return state.rom.mapper.ppu_read(&state.rom, addr);
     else if (addr < 0x3000) {
         u16 eaddr = addr & 0x7FF;
+        u8 value = 0;
         if (state.rom.mirror_type == HORIZONTAL) {
             // bit 11 is MSB (AABB)
-            return state.ppu_mem.vram[eaddr | ((addr & 0x800)>>1)];
+            value = state.ppu_mem.vram[eaddr | ((addr & 0x800)>>1)];
         }
         else {
             // bit 10 is MSB (ABAB)
-            return state.ppu_mem.vram[eaddr | (addr & 0x400)]; 
+            value = state.ppu_mem.vram[eaddr | (addr & 0x400)]; 
         }
         // TODO more mapping types
+        return value;
     }
     else if (addr < 0x3F00) return 0;
     else return ppu_palette_ram_read(&state.ppu_st, addr & 0x1F);
