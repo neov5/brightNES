@@ -86,6 +86,16 @@ typedef union {
     u16 data;
 } ppu_pt_addr_t;
 
+typedef union {
+    struct {
+        u8 y;    // LSB
+        u8 index;
+        u8 attr;
+        u8 x;    // MSB
+    };
+    u32 data;
+} ppu_sprite_t;
+
 typedef struct {
 
     // Don't access these externally! Use the methods
@@ -96,7 +106,26 @@ typedef struct {
     u8 oamdata;
     u8 oamdma;
 
-    u8 oam[0x100];
+    union {
+        ppu_sprite_t sprites[64];
+        u8 data[256];
+    } oam;
+
+    union {
+        ppu_sprite_t sprites[8];
+        u8 data[32];
+    } sec_oam;
+
+    u32 _sprite_srs[8]; // 4 x 8, shifts left
+    s16 _sprite_ctrs[8];
+    bool _sprite_priorities[8];
+
+    u8 _oam_ctr;
+    u8 _sec_oam_ctr;
+
+    u8 _num_sprites_on_next_scanline;
+    u8 _num_sprites_on_curr_scanline;
+
     u8 palette_ram[0x20];
 
     u8 (*bus_read)(u16);
