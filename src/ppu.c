@@ -53,6 +53,7 @@ u8 ppu_oamdata_read(ppu_state_t *st) {
 }
 
 void ppu_oamdata_write(ppu_state_t *st, u8 data) {
+    log_info("OAM Writing 0x%hhx to 0x%hx", data, st->oamaddr);
     st->oam.data[st->oamaddr++] = data;
 }
 
@@ -61,10 +62,8 @@ void ppu_oamaddr_write(ppu_state_t *st, u8 data) {
 }
 
 void ppu_ppuctrl_write(ppu_state_t *st, u8 data) {
-    log_debug("Setting PPUCTRL to 0x%hhx", data);
     st->_io_bus = data;
     st->ppuctrl.data = st->_io_bus;
-    log_debug("PPUCTRL is now 0x%hhx", st->ppuctrl.data);
     st->_t.N = st->ppuctrl.N;
 }
 
@@ -185,7 +184,7 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     bool sprite_priority = false;
     bool sprite_pixel_found = false;
     for (int i=0; i<st->_num_sprites_on_curr_scanline; i++) {
-        if (st->_sprite_ctrs[i] <= 7 && st->_sprite_ctrs >= 0) {
+        if (st->_sprite_ctrs[i] <= 7 && st->_sprite_ctrs[i] >= 0) {
             // TODO sprite priority quirk with BG sprites
             sprite_pixel_found = true;
             shift = st->_sprite_ctrs[i]*4;
@@ -356,19 +355,23 @@ void ppu_sprite_eval(ppu_state_t *st) {
         st->_oam_ctr = 0;
         st->_sec_oam_ctr = 0;
     }
-    else if (st->_col <= 256) {
+    else if (st->_col <= 256 && st->_oam_ctr < 64) {
+        // TODO is the _oam_ctr check correct?
+        //
         // instead of the odd-even cycle thing, do the read and write both 
         // on the even cycle
         if (st->_col % 2 == 0) {
             // range check
             ppu_sprite_t sp = st->oam.sprites[st->_oam_ctr];
+            // log_info("Evaluating Sprite %d: (%hhx,%hhx,%hhx,%hhx)", st->_oam_ctr, sp.y, sp.index, sp.attr, sp.x);
             if (sp.y <= st->_row && sp.y >= st->_row-7) {
                 // in range
+                // log_info("Sprite %d: (%hhx,%hhx,%hhx,%hhx) in range", st->_oam_ctr, sp.y, sp.index, sp.attr, sp.x);
                 if (st->_sec_oam_ctr == 8) return;
                 st->sec_oam.sprites[st->_sec_oam_ctr++] = sp;
             }
             // TODO sprite overflow (step 2.3)
-            if (st->_oam_ctr < 64) st->_oam_ctr++;
+            if (st->_oam_ctr < 63) st->_oam_ctr++;
         }
     }
 }
@@ -411,10 +414,10 @@ void ppu_sprite_fetch(ppu_state_t *st) {
     }
     else if (st->_col % 8 == 6) {
         // Sprite LSBits fetch
-        u8 y_addr = sprite.y - st->_v.y;
+        u8 y_addr = st->_row - sprite.y;
         if (sprite.attr & 0x80) y_addr = 7-y_addr; // vertical flip
         ppu_pt_addr_t pt_lsb_addr = {
-            .y = sprite.y - st->_v.y,
+            .y = y_addr,
             .P = 0,
             .N = sprite.index,
             .H = st->ppuctrl.S,
@@ -436,10 +439,10 @@ void ppu_sprite_fetch(ppu_state_t *st) {
     }
     else if (st->_col % 8 == 0) {
         // Sprite MSBits fetch
-        u8 y_addr = sprite.y - st->_v.y;
+        u8 y_addr = st->_row - sprite.y;
         if (sprite.attr & 0x80) y_addr = 7-y_addr; // vertical flip
         ppu_pt_addr_t pt_msb_addr = {
-            .y = sprite.y - st->_v.y,
+            .y = y_addr,
             .P = 1,
             .N = sprite.index,
             .H = st->ppuctrl.S,
