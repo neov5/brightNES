@@ -6,6 +6,7 @@
 #include "mem.h"
 #include "rom.h"
 #include "dma.h"
+#include "joypad.h"
 
 typedef struct {
 
@@ -17,6 +18,7 @@ typedef struct {
     rom_t rom;
 
     disp_t disp;
+    joypad_t joypad;
 
     bool frame_done;
     dma_oam_t dma_oam;

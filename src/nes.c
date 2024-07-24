@@ -33,7 +33,12 @@ u8 nes_cpu_bus_read(u16 addr) {
             default: return ppu_iobus_read(&state.ppu_st);
         }
     }
-    else if (addr < 0x4020) return state.cpu_mem.apu_io_reg[addr & 0x3F]; // TODO apu mapping
+    else if (addr < 0x4020) {
+        switch (addr) {
+            case 0x4016: return joypad_read(&state.joypad);
+            default: return state.cpu_mem.apu_io_reg[addr & 0x3F]; // TODO apu mapping
+        }
+    }
     else return state.rom.mapper.cpu_read(&state.rom, addr & 0x7FFF); // only ROM map, no WRAM
 }
 
@@ -73,12 +78,16 @@ void nes_cpu_bus_write(u8 data, u16 addr) {
         }
     }
     else if (addr < 0x4020) {
-        if (addr == 0x4014) {
-            state.dma_oam.enabled = true;
-            state.dma_oam.addr = data;
-        }
-        else {
-            state.cpu_mem.apu_io_reg[addr & 0x3F] = data;
+        switch (addr) {
+            case 0x4014:
+                state.dma_oam.enabled = true;
+                state.dma_oam.addr = data;
+                break;
+            case 0x4016: 
+                joypad_write(&state.joypad, data);
+                break;
+            default: 
+                state.cpu_mem.apu_io_reg[addr & 0x3F] = data;
         }
     }
     else state.rom.mapper.cpu_write(&state.rom, data, addr & 0x7FFF);
@@ -163,6 +172,7 @@ bool nes_update_events() {
             exit = true;
         }
     }
+    joypad_update(&state.joypad);
     return exit;
 }
 

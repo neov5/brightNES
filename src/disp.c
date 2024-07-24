@@ -6,8 +6,9 @@
 
 extern nes_state_t state;
 
-// int disp_ctr = 0;
-// clock_t tic;
+// TODO remove the disp_t struct and store the state statically here (as it's 
+// implementation dependent and we shouldn't enforce SDL in the headers 
+// anywhere)
 
 int disp_init(disp_t *disp) {
     int err;
