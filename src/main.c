@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
     while (!exit) {
         exit = nes_update_events();
         nes_render_frame();
+#ifndef NES_DEBUG
         timespec_get(&toc, TIME_UTC);
         // 60fps
         long long ns_delta = toc.tv_nsec - tic.tv_nsec;
@@ -31,6 +32,7 @@ int main(int argc, char** argv) {
             nanosleep((struct timespec[]){{0, 16666666LL-ns_delta}}, NULL);
         }
         timespec_get(&tic, TIME_UTC);
+#endif
     }
 
     nes_exit();

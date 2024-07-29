@@ -184,11 +184,8 @@ void nes_render_frame() {
 #ifdef NES_DEBUG
     while (!state.frame_done) {
         if (state.dma_oam.enabled) {
-            u64 cin = state.cpu_cycle;
             if (state.cpu_cycle % 2 == 0) state.cpu_st.tick();
             dma_oam(&state.dma_oam, &state.cpu_st, &state.ppu_st);
-            u64 cout = state.cpu_cycle;
-            log_debug("DMA took %ld cycles", cout-cin);
             state.dma_oam.enabled = false;
         }
         cpu_exec(&state.cpu_st);

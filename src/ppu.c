@@ -53,7 +53,6 @@ u8 ppu_oamdata_read(ppu_state_t *st) {
 }
 
 void ppu_oamdata_write(ppu_state_t *st, u8 data) {
-    log_info("OAM Writing 0x%hhx to 0x%hx", data, st->oamaddr);
     st->oam.data[st->oamaddr++] = data;
 }
 
@@ -181,6 +180,7 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     u8 bg_pixel = (st->_pix_sr & mask)>>shift;
 
     u8 sprite_pixel = 0;
+    u8 sprite_index = 255;
     bool sprite_priority = false;
     bool sprite_pixel_found = false;
     for (int i=0; i<st->_num_sprites_on_curr_scanline; i++) {
@@ -191,6 +191,7 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
             mask = 0xFU << shift;
             sprite_pixel = (st->_sprite_srs[i] & mask)>>shift;
             sprite_priority = st->_sprite_priorities[i];
+            sprite_index = st->_sprite_idxs[i];
             // this is a higher priority sprite than other sprites which may be drawn
             break;
         }
@@ -204,6 +205,13 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     else {
         // priority mux (https://www.nesdev.org/wiki/PPU_rendering#Picture_region)
         if ((bg_pixel & 0x3) != 0 && (sprite_pixel & 0x3) != 0) {
+            // opaque sprite pixel overlaps opaque background pixel - sprite 0 hit
+            // https://www.nesdev.org/wiki/PPU_OAM#Sprite_0_hits
+            if (!( ((st->ppumask.data & 0x3) && st->_col <= 7) ||
+                   (st->_col == 255) ||
+                   (st->ppustatus.S) ) && sprite_index == 0) {
+                st->ppustatus.S = 1;
+            }
             if (sprite_priority) final_pixel = bg_pixel; // yes, sprite priority 1 = bg pixel
             else final_pixel = sprite_pixel;
         }
@@ -368,7 +376,8 @@ void ppu_sprite_eval(ppu_state_t *st) {
                 // in range
                 // log_info("Sprite %d: (%hhx,%hhx,%hhx,%hhx) in range", st->_oam_ctr, sp.y, sp.index, sp.attr, sp.x);
                 if (st->_sec_oam_ctr == 8) return;
-                st->sec_oam.sprites[st->_sec_oam_ctr++] = sp;
+                st->sec_oam.sprites[st->_sec_oam_ctr] = sp;
+                st->_sprite_idxs[st->_sec_oam_ctr++] = st->_oam_ctr;
             }
             // TODO sprite overflow (step 2.3)
             if (st->_oam_ctr < 63) st->_oam_ctr++;
@@ -377,9 +386,6 @@ void ppu_sprite_eval(ppu_state_t *st) {
 }
 
 void ppu_sprite_reload(ppu_state_t *st) {
-    if (st->_num_sprites_on_next_scanline > 0) {
-        log_info("Got %d sprites on next scanline", st->_num_sprites_on_next_scanline);
-    }
     st->_num_sprites_on_curr_scanline = st->_num_sprites_on_next_scanline;
     for (int i=0; i<st->_num_sprites_on_curr_scanline; i++) {
         st->_sprite_ctrs[i] = st->sec_oam.sprites[i].x + 7;

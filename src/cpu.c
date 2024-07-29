@@ -357,7 +357,6 @@ void cpu_reset(cpu_state_t *st) {
 }
 
 void cpu_interrupt(cpu_state_t *st, u16 pc_addr) {
-    log_debug("CPU interrupted, going to 0x%hx", pc_addr);
     st->tick(); // 1
     st->tick(); // 2
     st->bus_write(lo((st->PC&0xFF00)>>8), 0x100 + (st->S--)); st->tick(); // 3

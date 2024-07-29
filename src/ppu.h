@@ -119,6 +119,7 @@ typedef struct {
     u32 _sprite_srs[8]; // 4 x 8, shifts left
     s16 _sprite_ctrs[8];
     bool _sprite_priorities[8];
+    u8 _sprite_idxs[8];
 
     u8 _oam_ctr;
     u8 _sec_oam_ctr;

@@ -18,7 +18,10 @@ int disp_init(disp_t *disp) {
     }
 
 #ifdef NES_DEBUG
-    disp->win = SDL_CreateWindow("", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
+    SDL_DisplayMode disp_mode;
+    SDL_GetCurrentDisplayMode(0, &disp_mode);
+    int screen_height = disp_mode.h;
+    disp->win = SDL_CreateWindow("", 0, screen_height-480, 512, 480, SDL_WINDOW_SHOWN);
 #else
     disp->win = SDL_CreateWindow("brightNES", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
 #endif
