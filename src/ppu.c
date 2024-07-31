@@ -4,9 +4,9 @@
 #include "log.h"
 
 void ppu_state_to_str(ppu_state_t* st, char buf[128]) {
-    snprintf(buf, 128, "[PPU r:%03hd c:%03hd ctrl:%02hhx mask:%02hhx status:%02hhx v:%04hx t:%04hx x:%01hx w:%d addr:%04hx]", 
+    snprintf(buf, 128, "[PPU r:%03hd c:%03hd ctrl:%02hhx mask:%02hhx status:%02hhx v:%04hx t:%04hx x:%01hx w:%d]", 
             st->_row, st->_col, st->ppuctrl.data, st->ppumask.data, st->ppustatus.data, st->_v.data, 
-            st->_t.data, st->_x, st->_w, st->_ppuaddr);
+            st->_t.data, st->_x, st->_w);
 }
 
 void ppu_reset(ppu_state_t *st) {
@@ -105,24 +105,28 @@ void ppu_ppuaddr_write(ppu_state_t *st, u8 data) {
     }
 }
 
-u8 ppu_ppudata_read(ppu_state_t *st) {
-    // ROM, RAM takes one extra cycle to read this from outbound memory
-    // palette accesses are done immediately
-    // however, the CPU will have a dummy read so this is ok to do for both
-    // NO! SMB uses the one cycle delay
-    // 
-    // 8716 | LDA [$2007]
-    // 8719 | LDA [$2007]
-    //
-    // TODO implement this buffering 
-    st->_io_bus = st->bus_read(st->_v.data);
+void ppu_ppuaddr_increment(ppu_state_t *st) {
     if (st->ppuctrl.I == 0) {
         st->_v.data++;
     }
     else {
         st->_v.data += 32;
     }
-    return st->_io_bus;
+}
+
+u8 ppu_ppudata_read(ppu_state_t *st) {
+    if (st->_v.data < 0x3000) {
+        // buffer reads from ROM/RAM
+        u8 old_data = st->_io_bus;
+        st->_io_bus = st->bus_read(st->_v.data);
+        ppu_ppuaddr_increment(st);
+        return old_data;
+    }
+    else {
+        st->_io_bus = st->bus_read(st->_v.data);
+        ppu_ppuaddr_increment(st);
+        return st->_io_bus;
+    }
 }
 
 void ppu_ppumask_write(ppu_state_t *st, u8 data) {
@@ -187,6 +191,8 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     bool sprite_priority = false;
     bool sprite_pixel_found = false;
     for (int i=0; i<st->_num_sprites_on_curr_scanline; i++) {
+        // TODO this check bugs out for sprites whose x is less than 0. It
+        // clips the sprites on the left of the screen early. Shouldn't happen.
         if (st->_sprite_ctrs[i] <= 7 && st->_sprite_ctrs[i] >= 0) {
             // TODO sprite priority quirk with BG sprites
             // find the first opaque sprite pixel

@@ -140,7 +140,6 @@ typedef struct {
     s16 _col;
     u8 _rgb_palette[192];
 
-    u16 _ppuaddr;
     u8 _io_bus;
 
     // internal registers
