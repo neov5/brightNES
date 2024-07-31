@@ -4,8 +4,8 @@
 #include "log.h"
 
 void ppu_state_to_str(ppu_state_t* st, char buf[128]) {
-    snprintf(buf, 128, "[PPU r:%03hd c:%03hd iobus: %02hhx ctrl:%02hhx mask:%02hhx status:%02hhx v:%04hx t:%04hx x:%01hx w:%d addr:%04hx]", 
-            st->_row, st->_col, st->_io_bus, st->ppuctrl.data, st->ppumask.data, st->ppustatus.data, st->_v.data, 
+    snprintf(buf, 128, "[PPU r:%03hd c:%03hd ctrl:%02hhx mask:%02hhx status:%02hhx v:%04hx t:%04hx x:%01hx w:%d addr:%04hx]", 
+            st->_row, st->_col, st->ppuctrl.data, st->ppumask.data, st->ppustatus.data, st->_v.data, 
             st->_t.data, st->_x, st->_w, st->_ppuaddr);
 }
 
@@ -109,6 +109,12 @@ u8 ppu_ppudata_read(ppu_state_t *st) {
     // ROM, RAM takes one extra cycle to read this from outbound memory
     // palette accesses are done immediately
     // however, the CPU will have a dummy read so this is ok to do for both
+    // NO! SMB uses the one cycle delay
+    // 
+    // 8716 | LDA [$2007]
+    // 8719 | LDA [$2007]
+    //
+    // TODO implement this buffering 
     st->_io_bus = st->bus_read(st->_v.data);
     if (st->ppuctrl.I == 0) {
         st->_v.data++;
@@ -142,7 +148,8 @@ u8 ppu_palette_ram_read(ppu_state_t *st, u8 addr) {
         case 0x04: case 0x14:
         case 0x08: case 0x18:
         case 0x0C: case 0x1C: 
-            return st->palette_ram[addr & 0xF];
+            // TODO implement background palette direct access
+            return st->palette_ram[0];
         default: 
             return st->palette_ram[addr];
     }
@@ -160,10 +167,6 @@ void ppu_palette_ram_write(ppu_state_t *st, u8 addr, u8 data) {
             st->palette_ram[addr] = data; break;
     }
 }
-
-// TODO sprite evaluation
-
-// Iteration 1: Don't do any sprite evaluation. Just render the background.
 
 // TODO better name
 void ppu_shift_bufs(ppu_state_t *st) {
@@ -186,6 +189,7 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
     for (int i=0; i<st->_num_sprites_on_curr_scanline; i++) {
         if (st->_sprite_ctrs[i] <= 7 && st->_sprite_ctrs[i] >= 0) {
             // TODO sprite priority quirk with BG sprites
+            // find the first opaque sprite pixel
             sprite_pixel_found = true;
             shift = st->_sprite_ctrs[i]*4;
             mask = 0xFU << shift;
@@ -193,7 +197,7 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
             sprite_priority = st->_sprite_priorities[i];
             sprite_index = st->_sprite_idxs[i];
             // this is a higher priority sprite than other sprites which may be drawn
-            break;
+            if ((sprite_pixel & 0x3) != 0) break;
         }
     }
     sprite_pixel |= 0x10; // sprite palette is from 0x10-0x1F
