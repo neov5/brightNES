@@ -181,7 +181,7 @@ void ppu_shift_pix_sr(ppu_state_t *st) {
     st->_pix_sr <<= 4;
 }
 
-void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
+void ppu_put_pixel(ppu_state_t *st) {
     u8 shift = 60 - (st->_x*4);
     u64 mask = 0xFULL << shift;
     u8 bg_pixel = (st->_pix_sr & mask)>>shift;
@@ -238,7 +238,7 @@ void ppu_put_pixel(ppu_state_t *st, disp_t *disp) {
 
     u8 palette_idx = ppu_palette_ram_read(st, final_pixel);
 
-    disp_putpixel(disp, st->_col-1, st->_row,
+    disp_putpixel(st->_col-1, st->_row,
             st->_rgb_palette[palette_idx*3], st->_rgb_palette[palette_idx*3+1], st->_rgb_palette[palette_idx*3+2]);
 }
 
@@ -316,7 +316,7 @@ void ppu_load_horiz_addr(ppu_state_t *st) {
     st->_v.N = (st->_v.N & 0x2) | (st->_t.N & 0x1);
 }
 
-void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
+void ppu_prerender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st) {
     switch (ppu_st->_col) {
         case 1:
             ppu_st->ppustatus.V = ppu_st->ppustatus.S = ppu_st->ppustatus.O = 0;
@@ -488,7 +488,7 @@ void ppu_sprite_update(ppu_state_t *st) {
     }
 }
 
-void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
+void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st) {
     if (ppu_st->_col == 0) {
         // idle cycle
     }
@@ -498,7 +498,7 @@ void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, 
             if (ppu_st->ppumask.s) {
                 ppu_sprite_eval(ppu_st);
             }
-            ppu_put_pixel(ppu_st, disp);
+            ppu_put_pixel(ppu_st);
             ppu_sprite_update(ppu_st);
             ppu_shift_pix_sr(ppu_st);
             ppu_get_next_pixel(ppu_st);
@@ -519,9 +519,9 @@ void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, 
     // TODO garbage nametable fetches - MMC5 uses them
 }
 
-void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
+void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st) {
     if (ppu_st->_col == 1) {
-        if (ppu_st->ppumask.b) disp_blit(disp); 
+        if (ppu_st->ppumask.b) disp_blit(); 
         ppu_st->ppustatus.V = 1;
     }
     else if (ppu_st->_col == 4) {
@@ -529,16 +529,16 @@ void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp
     }
 }
 
-void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
+void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st) {
 
     ppu_st->_col = (ppu_st->_col+1)%341;
     if (ppu_st->_col == 0) ppu_st->_row = (ppu_st->_row+1)%262;
     // tick forward and produce one pixel worth of data 
 
     switch (ppu_st->_row) {
-        case 261: ppu_prerender_scanline_tick(ppu_st, cpu_st, disp); break;
-        case 0 ... 239: ppu_render_visible_scanline_tick(ppu_st, cpu_st, disp); break;
-        case 241: ppu_postrender_scanline_tick(ppu_st, cpu_st, disp); break;
+        case 261: ppu_prerender_scanline_tick(ppu_st, cpu_st); break;
+        case 0 ... 239: ppu_render_visible_scanline_tick(ppu_st, cpu_st); break;
+        case 241: ppu_postrender_scanline_tick(ppu_st, cpu_st); break;
     }
 
 

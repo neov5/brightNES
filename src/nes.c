@@ -3,14 +3,6 @@
 #include "dma.h"
 #include <errno.h>
 
-#ifdef WIN32
-#include <io.h>
-#define F_OK 0
-#define access _access
-#else
-#include <unistd.h>
-#endif
-
 nes_state_t state;
 
 // credits: https://pixeltao.itch.io/pixeltao-cxa-nes-palette
@@ -123,7 +115,7 @@ void nes_cpu_tick_callback() {
     // TODO loop unroll hinting via pragmas for GCC/clang
     state.cpu_cycle++;
     for (int i=0; i<3; i++) {
-        ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+        ppu_tick(&state.ppu_st, &state.cpu_st);
         state.ppu_cycle++;
         if (state.ppu_cycle % 1000 == 0) {
         }
@@ -166,7 +158,7 @@ void nes_load_palette(char *palette_path) {
 }
 
 void nes_init(char* rom_path) {
-    disp_init(&state.disp);
+    disp_init();
     rom_load_from_file(&state.rom, rom_path);
     
     // cpu init code
@@ -176,18 +168,18 @@ void nes_init(char* rom_path) {
     // ppu takes 4 cycles more than cpu? (source: mesen)
     // TODO debug why mesen's startup state is randomized (PPU takes 27 cycles
     // for excitebike and 25 on most other mapper 0 games)
-    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    ppu_tick(&state.ppu_st, &state.cpu_st);
     state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    ppu_tick(&state.ppu_st, &state.cpu_st);
     state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    ppu_tick(&state.ppu_st, &state.cpu_st);
     state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st, &state.disp);
+    ppu_tick(&state.ppu_st, &state.cpu_st);
     state.ppu_cycle++;
 }
 
 void nes_exit() {
-    disp_free(&state.disp);
+    disp_free();
     rom_free(&state.rom);
 }
 

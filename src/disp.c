@@ -6,11 +6,10 @@
 
 extern nes_state_t state;
 
-// TODO remove the disp_t struct and store the state statically here (as it's 
-// implementation dependent and we shouldn't enforce SDL in the headers 
-// anywhere)
+static SDL_Window *win;
+static SDL_Surface *surf;
 
-int disp_init(disp_t *disp) {
+int disp_init() {
     int err;
     if ((err = SDL_Init(SDL_INIT_VIDEO))) {
         log_fatal("Could not initialize SDL: %s", SDL_GetError());
@@ -21,19 +20,19 @@ int disp_init(disp_t *disp) {
     SDL_DisplayMode disp_mode;
     SDL_GetCurrentDisplayMode(0, &disp_mode);
     int screen_height = disp_mode.h;
-    disp->win = SDL_CreateWindow("", 0, screen_height-480, 512, 480, SDL_WINDOW_SHOWN);
+    win = SDL_CreateWindow("", 0, screen_height-480, 512, 480, SDL_WINDOW_SHOWN);
 #else
-    disp->win = SDL_CreateWindow("brightNES", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
+    win = SDL_CreateWindow("brightNES", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
 #endif
-    if (disp->win == NULL) {
+    if (win == NULL) {
         log_fatal("Could not create Window: %s", SDL_GetError());
         SDL_Quit();
         return -1;
     }
 
-    disp->surf = SDL_GetWindowSurface(disp->win);
-    if (disp->surf == NULL) {
-        SDL_DestroyWindow(disp->win);
+    surf = SDL_GetWindowSurface(win);
+    if (surf == NULL) {
+        SDL_DestroyWindow(win);
         log_fatal("Could not create Surface: %s", SDL_GetError());
         SDL_Quit();
         return -1;
@@ -42,18 +41,18 @@ int disp_init(disp_t *disp) {
     return 0;
 }
 
-void disp_putpixel(disp_t *disp, u32 x, u32 y, u8 r, u8 g, u8 b) {
+void disp_putpixel(u32 x, u32 y, u8 r, u8 g, u8 b) {
     x *= 2;
     y *= 2;
-    Uint32 color = SDL_MapRGB(disp->surf->format, r, g, b);
-    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w) + x] = color;
-    ((Uint32*)disp->surf->pixels)[((y+1)*disp->surf->w) + x] = color;
-    ((Uint32*)disp->surf->pixels)[((y+1)*disp->surf->w) + x + 1] = color;
-    ((Uint32*)disp->surf->pixels)[(y*disp->surf->w) + x + 1] = color;
+    Uint32 color = SDL_MapRGB(surf->format, r, g, b);
+    ((Uint32*)surf->pixels)[(y*surf->w) + x] = color;
+    ((Uint32*)surf->pixels)[((y+1)*surf->w) + x] = color;
+    ((Uint32*)surf->pixels)[((y+1)*surf->w) + x + 1] = color;
+    ((Uint32*)surf->pixels)[(y*surf->w) + x + 1] = color;
 }
 
-void disp_blit(disp_t *disp) {
-    SDL_UpdateWindowSurface(disp->win);
+void disp_blit() {
+    SDL_UpdateWindowSurface(win);
     state.frame_done = true;
     // clock_t toc = clock();
     // if (disp_ctr > 0) {
@@ -64,8 +63,8 @@ void disp_blit(disp_t *disp) {
     // disp_ctr++;
 }
 
-int disp_free(disp_t *disp) {
-    SDL_DestroyWindowSurface(disp->win);
-    SDL_DestroyWindow(disp->win);
+int disp_free() {
+    SDL_DestroyWindowSurface(win);
+    SDL_DestroyWindow(win);
     return 0;
 }

@@ -1,15 +1,6 @@
 #ifndef __PPU_H__
 #define __PPU_H__
 
-#define PPUCTRL 0x2000
-#define PPUMASK 0x2001
-#define PPUSTATUS 0x2002
-#define OAMADDR 0x2003
-#define OAMDATA 0x2003
-#define PPUSCROLL 0x2005
-#define PPUADDR 0x2006
-#define PPUDATA 0x2007
-
 #include <stdbool.h>
 
 #include "types.h"
@@ -168,7 +159,7 @@ u8 ppu_iobus_read(ppu_state_t *st);
 void ppu_palette_ram_write(ppu_state_t *st, u8 addr, u8 data);
 u8 ppu_palette_ram_read(ppu_state_t *st, u8 addr);
 
-void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp);
+void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st);
 void ppu_init(ppu_state_t *st);
 void ppu_state_to_str(ppu_state_t *st, char buf[128]);
 

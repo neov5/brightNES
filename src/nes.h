@@ -17,7 +17,6 @@ typedef struct {
 
     rom_t rom;
 
-    disp_t disp;
     joypad_t joypad;
 
     bool frame_done;
