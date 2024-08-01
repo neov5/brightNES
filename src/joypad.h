@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright 2024 neov5
+
 #ifndef __JOYPAD_H__
 #define __JOYPAD_H__
 

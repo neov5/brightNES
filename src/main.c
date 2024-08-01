@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright 2024 neov5
+
 #include "nes.h"
 #include "log.h"
 #include "parse_args.h"
