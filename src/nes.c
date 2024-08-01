@@ -2,6 +2,7 @@
 #include "log.h"
 #include "dma.h"
 #include <errno.h>
+#include <SDL2/SDL.h>
 
 nes_state_t state;
 

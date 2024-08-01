@@ -1,7 +1,6 @@
 #ifndef __DISP_H__
 #define __DISP_H__
 
-#include <SDL2/SDL.h>
 #include "types.h"
 
 int disp_init();

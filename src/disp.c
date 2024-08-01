@@ -3,6 +3,7 @@
 #include "nes.h"
 #include "log.h"
 #include <time.h>
+#include <SDL2/SDL.h>
 
 extern nes_state_t state;
 
@@ -20,7 +21,7 @@ int disp_init() {
     SDL_DisplayMode disp_mode;
     SDL_GetCurrentDisplayMode(0, &disp_mode);
     int screen_height = disp_mode.h;
-    win = SDL_CreateWindow("", 0, screen_height-480, 512, 480, SDL_WINDOW_SHOWN);
+    win = SDL_CreateWindow("brightNES (Debug Mode)", 0, screen_height-480, 512, 480, SDL_WINDOW_SHOWN);
 #else
     win = SDL_CreateWindow("brightNES", 100, 100, 512, 480, SDL_WINDOW_SHOWN);
 #endif

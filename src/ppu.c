@@ -2,6 +2,7 @@
 #include "cpu.h"
 #include "disp.h"
 #include "log.h"
+#include <string.h>
 
 void ppu_state_to_str(ppu_state_t* st, char buf[128]) {
     snprintf(buf, 128, "[PPU r:%03hd c:%03hd ctrl:%02hhx mask:%02hhx status:%02hhx v:%04hx t:%04hx x:%01hx w:%d]", 
