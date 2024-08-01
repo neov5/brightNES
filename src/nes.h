@@ -37,6 +37,7 @@ u8 nes_ppu_bus_read(u16 addr);
 void nes_cpu_bus_write(u8 data, u16 addr);
 void nes_ppu_bus_write(u8 data, u16 addr);
 
+void nes_load_palette(char* palette_path);
 void nes_init(char* rom_path);
 bool nes_update_events();
 void nes_exit();

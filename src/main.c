@@ -1,21 +1,35 @@
 #include "nes.h"
-#include <stdio.h>
 #include "log.h"
+#include "parse_args.h"
+#include <stdio.h>
+
 
 int main(int argc, char** argv) {
+
+    char *palette_path = NULL;
+    char *rom_path = NULL;
+
+    args_option_t options[] = {
+        ARGS_POSITIONAL_ARG(ARGTYPE_STRING, &rom_path),
+        ARGS_OPTION("-p", "--palette", ARGTYPE_STRING, &palette_path),
+        ARGS_END_OF_OPTIONS
+    };
 
 #ifdef NES_DEBUG
     log_add_fp(fopen("build/debug/brightnes.log", "w"));
 #endif
 
-    if (argc <= 1) {
-        printf("ROM path not specified. Exiting.\n");
+    if (parse_arguments(argc, argv, options) < 0) {
+        printf("usage: brightnes <rom_path> [-p|--palette palette_path]\n");
         return 0;
     }
 
-    // TODO palette loading with -p|--palette
+    if (palette_path != NULL) {
+        nes_load_palette(palette_path);
+    }
 
     nes_init(argv[1]);
+
 
     bool exit = false;
     struct timespec tic, toc;

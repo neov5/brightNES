@@ -381,10 +381,8 @@ void ppu_sprite_eval(ppu_state_t *st) {
         if (st->_col % 2 == 0) {
             // range check
             ppu_sprite_t sp = st->oam.sprites[st->_oam_ctr];
-            // log_info("Evaluating Sprite %d: (%hhx,%hhx,%hhx,%hhx)", st->_oam_ctr, sp.y, sp.index, sp.attr, sp.x);
             if (sp.y <= st->_row && sp.y >= st->_row-7) {
                 // in range
-                // log_info("Sprite %d: (%hhx,%hhx,%hhx,%hhx) in range", st->_oam_ctr, sp.y, sp.index, sp.attr, sp.x);
                 if (st->_sec_oam_ctr == 8) return;
                 st->sec_oam.sprites[st->_sec_oam_ctr] = sp;
                 st->_sprite_idxs[st->_sec_oam_ctr++] = st->_oam_ctr;
@@ -518,7 +516,7 @@ void ppu_render_visible_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, 
             ppu_get_next_pixel(ppu_st);
         }
     }
-    // TODO garbage nametable fetches - MMC5 uses them?
+    // TODO garbage nametable fetches - MMC5 uses them
 }
 
 void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
@@ -531,22 +529,11 @@ void ppu_postrender_scanline_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp
     }
 }
 
-// TODO we are one cycle behind on some frames. I guess it's a timing issue.
-// Check the skip cycle.
-//
-// The bug is right above, with the timing of NMI mattering. Some times the 
-// instruction after the NMI is supposed to execute, and it doesn't.
-// Also the skip cycle can be disabled!
-
 void ppu_tick(ppu_state_t *ppu_st, cpu_state_t *cpu_st, disp_t *disp) {
 
     ppu_st->_col = (ppu_st->_col+1)%341;
     if (ppu_st->_col == 0) ppu_st->_row = (ppu_st->_row+1)%262;
     // tick forward and produce one pixel worth of data 
-    // it's okay to coalesce processing logic and do multiple pixel writes in 
-    // a single cycle
-
-    // TODO sprite evaluation
 
     switch (ppu_st->_row) {
         case 261: ppu_prerender_scanline_tick(ppu_st, cpu_st, disp); break;

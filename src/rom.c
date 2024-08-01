@@ -1,28 +1,22 @@
 #include "rom.h"
 #include "log.h"
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-#ifdef WIN32
-#include <io.h>
-#define F_OK 0
-#define access _access
-#else
-#include <unistd.h>
-#endif
 
 static const char MAGIC[4] = { 0x4E, 0x45, 0x53, 0x1A }; // NES\r
 
 void rom_load_from_file(rom_t *rom, char* filename) {
 
-    if (access(filename, F_OK) != 0) {
-        log_fatal("File does not exist");
-        exit(0);
-    }
     char header[16];
 
     FILE *rom_file = fopen(filename, "rb");
+    if (rom_file == NULL) {
+        log_fatal("Could not open palette file for reading: error %s", strerror(errno));
+        exit(0);
+    }
+    // TODO add error checks if we couldn't read
     fread(header, 16, 1, rom_file);
 
     if (memcmp(header, MAGIC, 4) != 0) {
@@ -42,6 +36,8 @@ void rom_load_from_file(rom_t *rom, char* filename) {
 
     fread(rom->prg_rom, rom->prg_rom_size, 1, rom_file);
     fread(rom->chr_rom, rom->chr_rom_size, 1, rom_file);
+
+    fclose(rom_file);
 
     switch (mapper) {
         case 0x00: 

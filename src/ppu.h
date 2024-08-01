@@ -138,7 +138,7 @@ typedef struct {
 
     s16 _row;
     s16 _col;
-    u8 _rgb_palette[192];
+    u8 *_rgb_palette;
 
     u8 _io_bus;
 
