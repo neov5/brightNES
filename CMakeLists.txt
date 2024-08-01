@@ -3,22 +3,24 @@ project(brightNES LANGUAGES C CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE) # for clangd
 set(C_STANDARD 99)
 set(CXX_STANDARD 17)
-# enable_testing()
 
 set(CMAKE_C_FLAGS_DEBUG "-DNES_DEBUG -DLOG_DEBUG -DLOG_USE_COLOR -Wall -Wextra")
 set(CMAKE_C_FLAGS_RELEASE "-DLOG_WARN -DLOG_USE_COLOR -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-DNES_DEBUG -DLOG_DEBUG -DLOG_USE_COLOR -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_RELEASE "-DLOG_WARN -DLOG_USE_COLOR -O3")
 
-add_subdirectory(lib/SDL EXCLUDE_FROM_ALL)
+option(SYSTEM_SDL "Use system installed SDL2" 0)
+
+if(SYSTEM_SDL)
+    find_package(SDL2 REQUIRED)
+    if (NOT TARGET SDL2::SDL2)
+        message(FATAL_ERROR "SDL2 not found or not properly installed.")
+    endif()
+    include_directories(${SDL2_INCLUDE_DIRS})
+else()
+    add_subdirectory(lib/SDL EXCLUDE_FROM_ALL)
+endif()
 
 file(GLOB_RECURSE SOURCES src/*.h src/*.c)
 add_executable(brightnes ${SOURCES})
-# add_library(cpu src/cpu.h src/cpu.c)
 target_link_libraries(brightnes PRIVATE SDL2::SDL2)
-
-# add_executable(functional_test test/functional.c)
-# target_include_directories(functional_test PUBLIC src)
-# target_link_libraries(functional_test cpu)
-# add_test(NAME functional COMMAND ./functional_test ../test/res/6502_functional_test.bin)
-# set_property (TEST functional PROPERTY PASS_REGULAR_EXPRESSION "Success")
