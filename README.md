@@ -53,7 +53,22 @@ unresponsive as a result of not processing SDL events.
 
 ## Debug Mode
 
-BrightNES supp
+BrightNES supports rudimentary command-line based debugging when compiled 
+with NES_DEBUG defined (set in debug builds). Debug mode breaks on entry and 
+gives you a prompt to step through the program
+
+```
+(cpu:       7) (ppu:      25) DEBUG [PPU r:000 c:025 ctrl:00 mask:00 status:00 v:0000 t:0000 x:0 w:0]
+(cpu:       7) (ppu:      25) DEBUG [CPU A:00 X:00 Y:00 PC:8000 S:fd P:34]
+>
+```
+
+You can either:
+- Step to the first cpu cycle >= X, using `s X`
+- Exit debug mode using `e`
+- Step to the next instruction and printing the CPU/PPU status by hitting enter
+
+In addition, the logs are written to `brightnes.log` in `build/debug`.
 
 ## TODO
 
