@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-project(brightNES LANGUAGES C)
+project(brightNES 
+    VERSION 0.1
+    LANGUAGES C)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE) # for clangd
 set(C_STANDARD 99)
 
