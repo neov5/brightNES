@@ -172,14 +172,11 @@ void nes_init(char* rom_path) {
     // ppu takes 4 cycles more than cpu? (source: mesen)
     // TODO debug why mesen's startup state is randomized (PPU takes 27 cycles
     // for excitebike and 25 on most other mapper 0 games)
-    ppu_tick(&state.ppu_st, &state.cpu_st);
-    state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st);
-    state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st);
-    state.ppu_cycle++;
-    ppu_tick(&state.ppu_st, &state.cpu_st);
-    state.ppu_cycle++;
+    int N_OFFSET = 4;
+    for (int i=0; i<N_OFFSET; i++) {
+        ppu_tick(&state.ppu_st, &state.cpu_st);
+        state.ppu_cycle++;
+    }
 }
 
 void nes_exit() {

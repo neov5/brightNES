@@ -76,6 +76,7 @@ In addition, the logs are written to `brightnes.log` in `build/debug`.
   - [ ] Ice Climber 
   - [ ] Ice Hockey
   - [ ] SMB rendering when mario is at the top of the screen
+- [ ] CI/CD setup with GitHub actions
 - [ ] APU
 - [ ] Mappers
   - [ ] MMC1

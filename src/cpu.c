@@ -386,7 +386,7 @@ int cpu_exec(cpu_state_t *st) {
     }
     if (st->RST == 1 && st->P.I == 0) {
         cpu_interrupt(st, 0xFFFC);
-        st->IRQ = 0;
+        st->RST = 0;
         return 3;
     }
 
