@@ -1,3 +1,7 @@
 [submodule "lib/SDL"]
 	path = lib/SDL
 	url = https://github.com/libsdl-org/SDL
+[submodule "lib/Nuklear"]
+	path = lib/Nuklear
+	url = https://github.com/Immediate-Mode-UI/Nuklear
+	branch = 4.12.0
