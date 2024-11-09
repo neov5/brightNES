@@ -2,6 +2,13 @@
 
 Cycle-accurate NES emulator
 
+> [!IMPORTANT]
+> BrightNES started out as a fun way to learn 
+> emulator development and some fundamentals, and it's reached a point where 
+> I've learnt what I have to learn. The time investment required in getting 
+> feature parity with existing emulators such as Mesen and Nintendulator 
+> doesn't make sense, and **I would not be developing this further**.
+
 ![demo](ghimg/demo.png)
 
 ## Features
